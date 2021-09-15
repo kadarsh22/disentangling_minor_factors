@@ -6,11 +6,9 @@ import numpy as np
 
 class Trainer(object):
 
-    def __init__(self, config, opt):
+    def __init__(self, config):
         super(Trainer, self).__init__()
         self.config = config
-        self.opt = opt
-        self.ranking_loss = nn.BCEWithLogitsLoss()
 
     @staticmethod
     def set_seed(seed):

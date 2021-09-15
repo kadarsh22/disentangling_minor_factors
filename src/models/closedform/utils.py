@@ -7,8 +7,8 @@ from models.closedform.pggan_generator import PGGANGenerator
 from models.closedform.stylegan_generator import StyleGANGenerator
 from models.closedform.stylegan2_generator import StyleGAN2Generator
 
-GEN_CHECKPOINT_DIR = '../pretrained_models/generators/ClosedForm'
-DEFORMATOR_CHECKPOINT_DIR = '../pretrained_models/deformators/ClosedForm'
+GEN_CHECKPOINT_DIR = 'pretrained_models/generators/ClosedForm'
+DEFORMATOR_CHECKPOINT_DIR = 'pretrained_models/deformators/ClosedForm'
 
 
 def build_generator(gan_type, resolution, **kwargs):
@@ -33,9 +33,9 @@ def build_generator(gan_type, resolution, **kwargs):
     raise NotImplementedError(f'Unsupported GAN type `{gan_type}`!')
 
 
-def load_generator(opt, model_name=''):
+def load_generator(config, model_name=''):
     try:
-        model_name = opt.algo.ours.model_name
+        model_name = config.model_name
     except AttributeError:
         model_name = model_name
     """Loads pre-trained generator.
@@ -72,22 +72,22 @@ def load_generator(opt, model_name=''):
         generator.load_state_dict(checkpoint['generator_smooth'])
     else:
         generator.load_state_dict(checkpoint['generator'])
-#     generator = generator.cuda()
+#     generator = generator.cuda() ##todo
     generator.eval()
     print(f'Finish loading checkpoint.')
     return generator
 
 
-def load_deformator(opt):
-    model_name = opt.algo.ours.model_name
-    deformator_type = opt.algo.ours.deformator_type
+def load_deformator(config):
+    model_name = config.model_name
+    deformator_type = config.deformator_type
     _, directions, _ = torch.load(os.path.join(DEFORMATOR_CHECKPOINT_DIR, model_name, model_name + '.pkl'))
     directions_T = directions.T  ## Sefa returns eigenvectors as rows, so transpose required
     if deformator_type == 'linear':
-        deformator = CfLinear(opt.algo.ours.latent_dim, opt.algo.ours.num_directions)
+        deformator = CfLinear(config.latent_dim, config.num_directions)
         deformator.linear.weight.data = torch.FloatTensor(directions_T)
     elif deformator_type == 'ortho':
-        deformator = CfOrtho(opt.algo.ours.latent_dim, opt.algo.ours.num_directions)
+        deformator = CfOrtho(config.latent_dim, config.num_directions)
         deformator.ortho_mat.data = torch.FloatTensor(directions_T)
-    deformator.cuda()
+#    deformator.cuda()##todo
     return deformator

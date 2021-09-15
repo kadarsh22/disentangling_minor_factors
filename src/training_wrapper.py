@@ -1,48 +1,55 @@
 import logging
-
 from model_loader import get_model
 from train import Trainer
 from saver import Saver
 from utils import *
+import wandb
+from evaluation import Evaluator
 
 
-def run_training_wrapper(configuration, perf_logger):
-    directories = list_dir_recursively_with_ignore('.', ignores=['checkpoint.pt', '__pycache__'])
+def run_training_wrapper(config, perf_logger):
+    directories = list_dir_recursively_with_ignore('.',
+                                                   ignores=['checkpoint.pt', '__pycache__', 'wandb', 'venv', '.idea',
+                                                            'data','pretrained_models'
+                                                            'results'])
     filtered_dirs = []
     for file in directories:
         x, y = file
-        if x.count('/') < 3:
-            filtered_dirs.append((x, y))
-    files = [(f[0], os.path.join(opt.result_dir, "src_copy", f[1])) for f in filtered_dirs]
+        filtered_dirs.append((x, y))
+    files = [(f[0], os.path.join(os.getcwd(), 'results', wandb.run.name, "src_copy", f[1])) for f in filtered_dirs]
 
     copy_files_and_create_dirs(files)
 
     perf_logger.start_monitoring("Fetching data, models and class instantiations")
-    models = get_model(opt)
-    model_trainer = Trainer(configuration, opt)
-    saver = Saver(configuration)
+    models = get_model(config)
+    model_trainer = Trainer(config)
+    saver = Saver(config)
+    evaluator = Evaluator(config)
     perf_logger.stop_monitoring("Fetching data, models and class instantiations")
 
-    generator, deformator, deformator_opt = models
+    generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt = models
     generator.eval()
     deformator.train()
-    rank_predictor_loss_list = []
+    eps_predictor_loss_list = []
     deformator_ranking_loss_list = []
-    for step in range(opt.algo.ours.num_steps):
-        deformator, deformator_opt, rank_predictor, rank_predictor_opt, rank_predictor_loss, deformator_ranking_loss = \
+    for iteration in range(config.num_iterations):
+        deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss = \
             model_trainer.train_ours(generator, deformator, deformator_opt)
+        eps_predictor_loss_list.append(eps_predictor_loss)
         deformator_ranking_loss_list.append(deformator_ranking_loss)
 
-        if step % opt.algo.ours.logging_freq == 0:
-            rank_predictor_loss_avg = sum(rank_predictor_loss_list) / len(rank_predictor_loss_list)
+        if iteration % config.logging_freq == 0 and iteration != 0:
+            eps_predictor_loss_avg = sum(eps_predictor_loss_list) / len(eps_predictor_loss_list)
             deformator_ranking_loss_avg = sum(deformator_ranking_loss_list) / len(deformator_ranking_loss_list)
-            logging.info("step : %d / %d Rank predictor loss : %.4f Deformator_ranking loss  %.4f " % (
-                step, opt.algo.ours.num_steps, rank_predictor_loss_avg, deformator_ranking_loss_avg))
-            rank_predictor_loss_list = []
-            deformator_ranking_loss_list = []
+            logging.info("step : %d / %d eps predictor loss : %.4f Deformator_loss  %.4f " % (
+                iteration, config.ours.num_steps, eps_predictor_loss_avg, deformator_ranking_loss_avg))
+            wandb.log({'iteration': iteration + 1, 'loss': deformator_ranking_loss_avg})
 
-        if step % opt.algo.ours.saving_freq == 0 and step != 0:
-            params = (deformator, deformator_opt, rank_predictor, rank_predictor_opt)
+        if iteration % config.saving_freq == 0 and iteration != 0:
+            params = (deformator, deformator_opt, eps_predictor, eps_predictor_opt)
             perf_logger.start_monitoring("Saving Model")
-            saver.save_model(params, step)
+            saver.save_model(params, iteration)
             perf_logger.stop_monitoring("Saving Model")
+
+        if iteration % config.evaluation_freq == 0 and iteration != 0:
+            evaluator.evaluate_directions(deformator, resume_dir=config.resume_direction)
