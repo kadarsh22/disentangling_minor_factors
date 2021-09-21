@@ -34,7 +34,7 @@ class Evaluator(object):
         self.attr_list_dict = OrderedDict(zip(self.all_attr_list, attr_index))
 
     @staticmethod
-    def _set_seed(seed):
+    def set_seed(seed):
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = False
@@ -175,7 +175,7 @@ class Evaluator(object):
             with open(os.path.join(classifier_analysis_result_path, 'Classifier_top_directions_details.json'),
                       'w') as fp:
                 json.dump(classifier_direction_dict, fp)
-            print('Classifier analysis for ' + cls + ' at index ' + str(cls_index) + ' completed!!')
+            # print('Classifier analysis for ' + cls + ' at index ' + str(cls_index) + ' completed!!')
 
     def evaluate_directions(self, generator, deformator, resume=False, resume_dir=None):
         if not resume:

@@ -72,7 +72,7 @@ def load_generator(config, model_name=''):
         generator.load_state_dict(checkpoint['generator_smooth'])
     else:
         generator.load_state_dict(checkpoint['generator'])
-#     generator = generator.cuda() ##todo
+    generator = generator.to(config.device)
     generator.eval()
     print(f'Finish loading checkpoint.')
     return generator
@@ -82,12 +82,12 @@ def load_deformator(config):
     model_name = config.model_name
     deformator_type = config.deformator_type
     _, directions, _ = torch.load(os.path.join(DEFORMATOR_CHECKPOINT_DIR, model_name, model_name + '.pkl'))
-    directions_T = directions.T  ## Sefa returns eigenvectors as rows, so transpose required
+    directions_T = directions.T  # Sefa returns eigenvectors as rows, so transpose required
     if deformator_type == 'linear':
         deformator = CfLinear(config.latent_dim, config.num_directions)
         deformator.linear.weight.data = torch.FloatTensor(directions_T)
     elif deformator_type == 'ortho':
         deformator = CfOrtho(config.latent_dim, config.num_directions)
         deformator.ortho_mat.data = torch.FloatTensor(directions_T)
-#    deformator.cuda()##todo
+    deformator.to(config.device)
     return deformator

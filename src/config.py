@@ -2,18 +2,21 @@ import wandb
 import os
 import torch
 
-def get_config():
-    run = wandb.init(project='disentangling_minor_factors', entity='kadarsh22')
-    wandb.run.name = 'test_run'
+
+def get_config(args):
+    wandb.init(project='disentangling_minor_factors', entity='kadarsh22')
+    wandb.run.name = args['exp_name']
+    wandb.run.notes = args["exp_desc"]
     wandb.run.save()
 
     config = wandb.config
     config.gan_type = 'pggan'  # choices=['ProgGAN', 'StyleGAN2','SNGAN','StyleGAN']
     config.dataset = 'CelebAHQ'  # choices=['AnimeFaceS',CelebAHQ' ,'LSUN-cars', 'LSUN-cats'
-    config.model_name = 'pggan_celebahq1024'  # choices = ['pggan_celebahq1024',stylegan_animeface512,stylegan_car512,stylegan_cat256]
+    config.model_name = 'pggan_celebahq1024'  # choices = ['pggan_celebahq1024',stylegan_animeface512,
+    # stylegan_car512,stylegan_cat256]
     config.initialisation = 'closed_form'
-    config.random_seed = 123
-    config.num_iterations = 10
+    config.random_seeds = [123]
+    config.num_iterations = 10  # todo
     config.batch_size = 8
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
     config.deformator_lr = 0.0001
