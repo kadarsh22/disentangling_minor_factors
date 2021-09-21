@@ -33,7 +33,7 @@ def get_linear_out(net, im):
     return linear_out
 
 
-def load_attribute_classifier(attribute, ckpt_path=None):
+def load_attribute_classifier(attribute, ckpt_path=None,device='cuda'):
     # if ckpt_path is None:
     #     base_path = '/home/adarsh/PycharmProjects/disentagled_latent_dirs/pretrained_models/classifiers/celebahq'
     #     attribute_pkl = os.path.join(base_path, attribute, 'net_best.pth')
@@ -41,19 +41,19 @@ def load_attribute_classifier(attribute, ckpt_path=None):
     # else:
     #     ckpt = torch.load(ckpt_path)
     attribute_pkl = os.path.join(ckpt_path, attribute, 'net_best.pth')
-    ckpt = torch.load(attribute_pkl)
+    ckpt = torch.load(attribute_pkl, map_location=device)
     print("Using classifier at epoch: %d" % ckpt['epoch'])
     if 'valacc' in ckpt.keys():
         print("Validation acc on raw images: %0.5f" % ckpt['valacc'])
     detector = attribute_predictor_gan_ensemble.from_state_dict(
-        ckpt['state_dict'], fixed_size=True, use_mbstd=False).cuda().eval()
+        ckpt['state_dict'], fixed_size=True, use_mbstd=False).to(device).eval()
     return detector
 
 
 class ClassifierWrapper(torch.nn.Module):
     def __init__(self, classifier_name, ckpt_path=None, device='cuda'):
         super(ClassifierWrapper, self).__init__()
-        self.net = load_attribute_classifier(classifier_name, ckpt_path).eval().to(device)
+        self.net = load_attribute_classifier(classifier_name, ckpt_path,device).eval().to(device)
     # @torch.no_grad()
 #     @torch.cuda.amp.autocast()
     def forward(self, ims):

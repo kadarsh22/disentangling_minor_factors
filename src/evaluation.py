@@ -18,13 +18,14 @@ perf_logger = PerfomanceLogger()
 
 class Evaluator(object):
     def __init__(self, config):
-        self.result_path = config.esult_path
+        self.config = config
+        self.result_path = config.result_path
         self.simple_cls_path = config.simple_cls_path
         self.nvidia_cls_path = config.nvidia_cls_path
-        self.directions_idx = list(range(100))  # [4, 16, 23, 24, 8, 11]  ##TODOD change from 0 to 512
+        self.directions_idx = list(range(2))  # [4, 16, 23, 24, 8, 11]  ##TODOD change from 0 to 512
         self.num_directions = len(self.directions_idx)
         self.num_samples = config.eval_samples
-        self.epsilon = config.eval_epsilon
+        self.epsilon = config.eval_eps
         self.z_batch_size = config.batch_size
         self.num_batches = int(self.num_samples / self.z_batch_size)
         self.all_attr_list = ['eyeglasses', 'Bald', 'Bangs', 'Goatee', 'Mustache', 'Blurry', 'Pale_Skin',
@@ -46,14 +47,13 @@ class Evaluator(object):
         predictor_list = []
         for each in attr_list[:1]:
             predictor = attribute_predictor.get_classifier(
-                os.path.join(self.simple_cls_path, "classifiers", each, "weight.pkl"),
-                'cuda')
-            predictor.cuda().eval()
+                os.path.join(self.simple_cls_path, each, "weight.pkl"),self.config.device)
+            predictor.to(self.config.device).eval()
             predictor_list.append(predictor)
-        for classifier_name in attr_list[5:]:
+        for classifier_name in attr_list[1:]:
             predictor = attribute_utils.ClassifierWrapper(classifier_name, ckpt_path=self.nvidia_cls_path,
-                                                          device='cuda')
-            predictor.cuda().eval()
+                                                          device=self.config.device)
+            predictor.to(self.config.device).eval()
             predictor_list.append(predictor)
         return predictor_list
 
@@ -87,8 +87,8 @@ class Evaluator(object):
             for dir_index, dir in enumerate(directions_idx):
                 perf_logger.start_monitoring("Direction " + str(dir) + " completed")
                 for batch_idx, z in enumerate(z_loader):
-                    w_shift = z + deformator[dir: dir + 1] * self.epsilon
-                    images_shifted = generator(w_shift)
+                    z_shift = z + deformator[dir: dir + 1] * self.epsilon
+                    images_shifted = generator(z_shift)
                     images_shifted = (images_shifted + 1) / 2
                     predict_images = F.avg_pool2d(images_shifted, 4, 4)
                     for predictor_idx, predictor in enumerate(predictor_list):
@@ -123,8 +123,8 @@ class Evaluator(object):
         plt.rcParams['font.family'] = "Times New Roman"
         hm = sns.heatmap(matrix, annot=True, fmt=".2f", cbar=False, cmap='Blues')
         ax.xaxis.tick_top()
-        plt.xticks(np.arange(len(attribute_list)) + 0.5, labels=labels)
-        plt.yticks(np.arange(len(dir)) + 0.5, labels=labels, rotation=0)
+        plt.xticks(np.arange(len(attribute_list)) + 0.5, labels=attribute_list)
+        plt.yticks(np.arange(len(dir)) + 0.5, labels=labels , rotation=0)
         plt.tick_params(top=False)
         plt.tight_layout()
         plt.savefig(os.path.join(path, classifier + '_Rescoring_Analysis' + '.svg'), dpi=300)
@@ -169,21 +169,21 @@ class Evaluator(object):
 
             torch.save(classifier_rescoring_matrix,
                        os.path.join(classifier_analysis_result_path, cls + '_rescoring_matrix.pkl'))
-
+            labels = [str(direction) for direction in self.directions_idx]
             self.get_heat_map(classifier_rescoring_matrix, top_k_directions, attributes,
-                              classifier_analysis_result_path, classifier=cls)
+                              classifier_analysis_result_path, labels, classifier=cls)
             with open(os.path.join(classifier_analysis_result_path, 'Classifier_top_directions_details.json'),
                       'w') as fp:
                 json.dump(classifier_direction_dict, fp)
             print('Classifier analysis for ' + cls + ' at index ' + str(cls_index) + ' completed!!')
 
-    def evaluate_directions(self, deformator, resume=False, resume_dir=None):
-        generator = load_generator(None, model_name='pggan_celebahq1024')
+    def evaluate_directions(self, generator, deformator, resume=False, resume_dir=None):
         if not resume:
-            codes = torch.randn(self.num_samples, generator.z_space_dim).cuda()
+            codes = torch.randn(self.num_samples, generator.z_space_dim).to(self.config.device)
             codes = generator.layer0.pixel_norm(codes)
             codes = codes.detach()
             z = NoiseDataset(latent_codes=codes, num_samples=self.num_samples, z_dim=generator.z_space_dim)
+            os.makedirs(self.result_path,exist_ok=True)
             torch.save(z, os.path.join(self.result_path, 'z_analysis.pkl'))
         else:
             z = torch.load(os.path.join(self.result_path, 'z_analysis.pkl'))

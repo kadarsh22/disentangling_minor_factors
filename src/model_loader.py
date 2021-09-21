@@ -16,7 +16,7 @@ def get_model(config):
         deformator = load_ld_deformator(config)
 
     deformator_opt = torch.optim.Adam(deformator.parameters(), lr=config.deformator_lr)
-    eps_predictor = ResNetEpsPredictor(num_dirs=config.num_directions).cuda()
+    eps_predictor = ResNetEpsPredictor(num_dirs=config.num_directions).to(config.device)
     eps_predictor_opt = torch.optim.Adam(eps_predictor.parameters(), lr=config.eps_predictor_lr)
 
     return generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt

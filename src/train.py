@@ -20,8 +20,10 @@ class Trainer(object):
         random.seed(seed)
         os.environ['PYTHONHASHSEED'] = str(seed)
 
-    def train_ours(self, generator, deformator, deformator_opt):
+    def train_ours(self, generator, deformator, deformator_opt,eps_predictor, eps_predictor_opt):
         generator.zero_grad()
         deformator.zero_grad()
-        raise NotImplementedError
+        eps_predictor_loss = 0
+        deformator_ranking_loss = 0
+        return deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss
 

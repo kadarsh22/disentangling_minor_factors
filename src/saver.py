@@ -33,7 +33,7 @@ class Saver(object):
         artifact.add_file(os.path.join(models_dir, str(step) + '_model.pkl'))
         run.log_artifact(artifact)
         run.join()
-        wandb.log("Model Saved for iteration : "+str(step))
+
         return True
 
     def load_model(self, params):
