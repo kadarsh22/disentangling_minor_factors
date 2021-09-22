@@ -35,6 +35,7 @@ def run_training_wrapper(config, perf_logger):
     deformator.train()
     eps_predictor_loss_list = []
     deformator_ranking_loss_list = []
+    # saver.load_model((deformator,deformator_opt))
     for iteration in range(config.num_iterations):
         deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss = \
             model_trainer.train_ours(generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt)

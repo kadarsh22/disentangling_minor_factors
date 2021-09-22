@@ -39,6 +39,7 @@ def get_config(args):
     config.classifier_path = 'pretrained_models'
     config.simple_cls_path = 'pretrained_models/classifiers/'
     config.nvidia_cls_path = 'pretrained_models/classifiers/nvidia_classifiers'
+    config.file_name = '/8_model.pkl'
     config.result_path = os.path.join('results', wandb.run.name, 'qualitative_analysis')
 
     return config

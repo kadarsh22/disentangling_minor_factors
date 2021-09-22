@@ -29,21 +29,16 @@ class Saver(object):
             'random_state': random.getstate()
 
         }, os.path.join(models_dir, str(step) + '_model.pkl'))
-        deformator.ortho_mat.data[0][0] = deformator.ortho_mat.data[0][0] / 2
         artifact = wandb.Artifact(wandb.run.name, type='model')
         artifact.add_file(os.path.join(models_dir, str(step) + '_model.pkl'))
         wandb.run.log_artifact(artifact)
         return True
 
     def load_model(self, params):
-        models_dir = os.path.dirname(os.getcwd()) + f'/results/{wandb.run.name}' + '/models/' + self.config[
-            'file_name']  # project root
-        checkpoint = torch.load(models_dir)
-        run = wandb.init()
-        artifact = run.use_artifact('entity/your-project-name/model:v0', type='model')
-        artifact_dir = artifact.download()
-        run.join()
-
+        # models_dir = os.path.dirname(os.getcwd()) + f'/results/{wandb.run.name}' + '/models/' # project root
+        artifact = wandb.run.use_artifact('test_model_save_2:latest', type='model')
+        checkpoint_path = artifact.download()
+        checkpoint = torch.load(checkpoint_path + self.config.file_name)
         deformator, deformator_opt = params
         deformator.load_state_dict(checkpoint['deformator'])
         deformator_opt.load_state_dict(checkpoint['deformator_opt'])
