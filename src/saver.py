@@ -10,7 +10,7 @@ class Saver(object):
         self.config = config
 
     def save_model(self, params, step):
-        cwd = os.path.dirname(os.getcwd()) + f'/results/{wandb.run.name}'  # project root
+        cwd = os.path.dirname('results/'+ str(wandb.run.name)+'/')  # project root
         models_dir = cwd + '/models/'
 
         if not os.path.exists(models_dir):
