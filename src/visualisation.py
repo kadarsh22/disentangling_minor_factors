@@ -38,7 +38,6 @@ class Visualiser(object):
             directions_table.add_data(wandb.Image(image), str(dir_idx))
         directions_artifact.add(directions_table, "predictions")
         wandb.run.log_artifact(directions_artifact)
-        print("-------------------------logged_once------------------------------------------")
 
 
     def visualise_latent_traversal(self, initial_rep, decoder, epoch_num):

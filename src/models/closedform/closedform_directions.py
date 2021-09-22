@@ -24,14 +24,14 @@ class CfOrtho(nn.Module):
         self.out_dim = out_dim
         init = 0.001 * torch.randn((self.out_dim, self.input_dim)) + torch.eye(self.out_dim,
                                                                                self.input_dim)  ##todo
-        q, r = torch.qr(init)
+        q, r = torch.linalg.qr(init)
         unflip = torch.diag(r).sign().add(0.5).sign()
         q *= unflip[..., None, :]
         self.ortho_mat = nn.Parameter(q)
 
     def forward(self, input):
         with torch.no_grad():
-            q, r = torch.qr(self.ortho_mat.data)
+            q, r = torch.linalg.qr(self.ortho_mat.data)
             unflip = torch.diag(r).sign().add(0.5).sign()
             q *= unflip[..., None, :]
             self.ortho_mat.data = q

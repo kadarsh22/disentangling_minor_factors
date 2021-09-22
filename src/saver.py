@@ -16,7 +16,8 @@ class Saver(object):
         if not os.path.exists(models_dir):
             os.makedirs(models_dir)
 
-        deformator, deformator_opt,eps_predictor, eps_predictor_opt = params
+        deformator, deformator_opt, eps_predictor, eps_predictor_opt = params
+
         torch.save({
             'step': step,
             'deformator': deformator.state_dict(),
@@ -28,12 +29,10 @@ class Saver(object):
             'random_state': random.getstate()
 
         }, os.path.join(models_dir, str(step) + '_model.pkl'))
-        run = wandb.init(project='disentangling_minor_factors', entity='kadarsh22')
-        artifact = wandb.Artifact('model', type='model')
+        deformator.ortho_mat.data[0][0] = deformator.ortho_mat.data[0][0] / 2
+        artifact = wandb.Artifact(wandb.run.name, type='model')
         artifact.add_file(os.path.join(models_dir, str(step) + '_model.pkl'))
-        run.log_artifact(artifact)
-        run.join()
-
+        wandb.run.log_artifact(artifact)
         return True
 
     def load_model(self, params):

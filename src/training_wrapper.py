@@ -8,6 +8,7 @@ from evaluation import Evaluator
 from visualisation import Visualiser
 
 
+
 def run_training_wrapper(config, perf_logger):
     directories = list_dir_recursively_with_ignore('.',
                                                    ignores=['checkpoint.pt', '__pycache__', 'wandb', 'venv', '.idea',
@@ -53,10 +54,14 @@ def run_training_wrapper(config, perf_logger):
             saver.save_model(params, iteration)
             perf_logger.stop_monitoring("Saving Model for iteration :" + str(iteration))
 
-        if iteration % config.evaluation_freq == 0 and iteration != 0:
-            evaluator.evaluate_directions(generator, deformator.ortho_mat, resume_dir=config.resume_direction)
+        # if iteration % config.evaluation_freq == 0 and iteration != 0:
+        #     logging.info("Evaluation Started")
+        #     evaluator.evaluate_directions(generator, deformator.ortho_mat, resume_dir=config.resume_direction)
+        #     logging.info("Evaluation Completed")
+        #
+        # if iteration % config.visualisation_freq == 0:
+        #     logging.info("Visualisation Started")
+        #     visualiser.visualise_directions(generator, deformator, iteration)
+        #     # visualiser.generate_latent_traversal()
+        #     logging.info("Visualisation Completed")
 
-        if iteration % config.visualisation_freq == 0:
-            visualiser.visualise_directions(generator, deformator, iteration)
-            # visualiser.generate_latent_traversal()
-            print("test")

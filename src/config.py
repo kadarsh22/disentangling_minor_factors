@@ -31,7 +31,7 @@ def get_config(args):
     config.eval_eps = 10
     config.resume_direction = None
 
-    config.saving_freq = 100
+    config.saving_freq = 2
     config.logging_freq = 2
     config.evaluation_freq = 2
     config.visualisation_freq = 2
