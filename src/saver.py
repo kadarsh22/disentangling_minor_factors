@@ -10,7 +10,7 @@ class Saver(object):
         self.config = config
 
     def save_model(self, params, step):
-        cwd = os.path.dirname('results/'+ str(wandb.run.name)+'/')  # project root
+        cwd = os.path.dirname('results/' + str(wandb.run.name) + '/')  # project root
         models_dir = cwd + '/models/'
 
         if not os.path.exists(models_dir):
@@ -31,7 +31,7 @@ class Saver(object):
         }, os.path.join(models_dir, str(step) + '_model.pkl'))
         artifact = wandb.Artifact(wandb.run.name, type='model')
         artifact.add_file(os.path.join(models_dir, str(step) + '_model.pkl'))
-        wandb.run.log_artifact(artifact)
+        wandb.run.log_artifact(artifact,aliases=str(step))
         return True
 
     def load_model(self, params):

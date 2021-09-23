@@ -1,69 +1,63 @@
 import os
 import torch
 import torchvision
-import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import wandb
 import torch.nn.functional as F
+
 
 class Visualiser(object):
     def __init__(self, config):
         self.config = config
         self.experiment_name = wandb.run.name
 
-
-
-    def generate_plot_save_results(self, results, plot_type):
-        file_location = os.path.dirname(os.getcwd()) + f'/results/{self.experiment_name}' + '/visualisations/plots/'
-        if not os.path.exists(file_location):
-            os.makedirs(file_location)
-        plt.figure()
-        for name, values in results.items():
-            x_axis = list(range(len(values)))
-            plt.plot(x_axis, values, label=name)
-        plt.legend(loc="upper right")
-        path = file_location + str(plot_type) + '.jpeg'
-        plt.savefig(path)
-
     def visualise_directions(self, generator, deformator, iteration):
         directions = deformator.ortho_mat
-        directions_artifact = wandb.Artifact("test_samples_" + str(wandb.run.id), type="predictions")
+        directions_artifact = wandb.Artifact(str(wandb.run.name)+str('_directions'), type="Directions")
         directions_table = wandb.Table(columns=['images', 'direction_idx'])
         for dir_idx in range(self.config.batch_size):
             direction = directions[dir_idx: dir_idx + 1]
             images_shifted = generator(direction)
             images_shifted = (images_shifted + 1) / 2
             image = F.avg_pool2d(images_shifted, 4, 4)
-            image = torch.randn((3,128,128))
+            image = torch.randn((3, 128, 128))  # to remove
             directions_table.add_data(wandb.Image(image), str(dir_idx))
-        directions_artifact.add(directions_table, "predictions")
-        wandb.run.log_artifact(directions_artifact)
+        directions_artifact.add(directions_table, "directions")
+        wandb.run.log_artifact(directions_artifact, aliases=[str(iteration)])
 
+    def postprocess_images(self, images):
+        """Post-processes images from `torch.Tensor` to `numpy.ndarray`."""
+        images = images.detach().cpu().numpy()
+        images = (images + 1) * 255 / 2
+        images = np.clip(images + 0.5, 0, 255).astype(np.uint8)
+        images = images.transpose(0, 2, 3, 1)
+        return images
 
-    def visualise_latent_traversal(self, initial_rep, decoder, epoch_num):
-        interval_start = self.config['interval_start']
-        interval = (2 * (interval_start)) / 10
-        interpolation = torch.arange(-1 * interval_start, interval_start + interval, interval)
-        rep_org = initial_rep
-        file_location = os.path.dirname(
-            os.getcwd()) + f'/results/{self.experiment_name}' + '/visualisations/latent_traversal/'
-        if not os.path.exists(file_location):
-            os.makedirs(file_location)
-        path = file_location + str(epoch_num) + '.jpeg'
-        samples = []
-        z_ = torch.rand((1, self.config['noise_dim'])).cuda()
-        for j in range(self.config['latent_dim']):
-            temp = initial_rep.data[:, j].clone()
-            for k in interpolation:
-                rep_org.data[:, j] = k
-                if self.config['model_arch'] == 'gan':
-                    final_rep = torch.cat((z_, rep_org), dim=1)
-                    sample = decoder(final_rep)  # TODO need not be sigmoid
-                else:
-                    sample = torch.sigmoid(decoder(rep_org))
-                sample = sample.view(-1, 64, 64)
-                samples.append(sample)
-            rep_org.data[:, j] = temp
-        grid_img = torchvision.utils.make_grid(samples, nrow=10, padding=10, pad_value=1)
-        grid = grid_img.permute(1, 2, 0).type(torch.FloatTensor)
-        plt.imsave(path, grid.data.numpy())
+    def generate_latent_traversal(self, generator, deformator ,iteration):
+        min_index = 0
+        directions = deformator.ortho_mat
+        temp_path = os.path.join(self.config.result_path, 'temp')
+        os.makedirs(temp_path, exist_ok=True)
+        z = torch.randn(self.config.num_samples, generator.z_space_dim).to(self.config.device)
+        z = generator.layer0.pixel_norm(z)
+        latent_traversal_artifact = wandb.Artifact(str(wandb.run.name)+'_latent_traversals', type="Latent Traversals")
+        lt_table = wandb.Table(columns=['image_grid', 'direction_idx'])
+
+        for dir_idx in range(self.config.eval_directions):
+            shifted_z = []
+            for idx, z_ in enumerate(z):
+                for i, shift in enumerate(
+                        np.linspace(-self.config.shifts_r, self.config.shifts_r, self.config.shifts_count)):
+                    shifted_z.append(z_ + directions[dir_idx: dir_idx + 1] * shift)
+            shifted_z = torch.stack(shifted_z).squeeze(dim=1)
+            with torch.no_grad():
+                cf_images = torch.stack([F.avg_pool2d(generator(shifted_z[idx].view(-1,512)), 16, 16) for idx in range(shifted_z.shape[0])]).view(-1,3,64,64)
+            grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow=3, scale_each=True, normalize=True)
+            lt_table.add_data(wandb.Image(grid), str(dir_idx))
+            # display.display(plt.gcf())
+            plt.grid(b=None)
+            plt.imsave(os.path.join(temp_path, str(min_index) + '.png'), grid.permute(1, 2, 0).cpu().numpy())
+            min_index = min_index + 1
+        latent_traversal_artifact.add(lt_table, "lt")
+        wandb.run.log_artifact(latent_traversal_artifact, aliases=str(iteration))

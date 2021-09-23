@@ -15,12 +15,12 @@ def main():
     parser.add_argument('--exp_desc', help='description/aim of this experiment', required=False, default='null')
     args = vars(parser.parse_args())
     config = get_config(args)
-    PerfomanceLogger.configure_logger()
+    logger = PerfomanceLogger.configure_logger()
     perf_logger = PerfomanceLogger()
     if config.train:
         for seed in config.random_seeds:
             Trainer.set_seed(seed)
-            run_training_wrapper(config, perf_logger)
+            run_training_wrapper(config, logger, perf_logger)
     else:
         Evaluator.set_seed(config.random_seed)
         run_evaluation_wrapper(config, perf_logger)

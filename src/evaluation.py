@@ -3,7 +3,7 @@ import numpy as np
 import random
 import torch
 import os
-from models.closedform.utils import load_generator
+import wandb
 from utils import NoiseDataset
 import json
 from collections import OrderedDict
@@ -15,6 +15,7 @@ from models.attribute_predictors import attribute_predictor, attribute_utils
 
 sns.set_theme()
 perf_logger = PerfomanceLogger()
+
 
 class Evaluator(object):
     def __init__(self, config):
@@ -47,7 +48,7 @@ class Evaluator(object):
         predictor_list = []
         for each in attr_list[:1]:
             predictor = attribute_predictor.get_classifier(
-                os.path.join(self.simple_cls_path, each, "weight.pkl"),self.config.device)
+                os.path.join(self.simple_cls_path, each, "weight.pkl"), self.config.device)
             predictor.to(self.config.device).eval()
             predictor_list.append(predictor)
         for classifier_name in attr_list[1:]:
@@ -75,7 +76,7 @@ class Evaluator(object):
         torch.save(ref_image_scores, os.path.join(self.result_path, 'reference_attribute_scores.pkl'))
         return ref_image_scores
 
-    def get_evaluation_metric_values(self, generator, deformator, attribute_list, reference_attr_scores, z_loader,
+    def get_evaluation_metric_values(self, generator, deformator, iteration, attribute_list, reference_attr_scores, z_loader,
                                      directions_idx, resume=False, direction_to_resume=None):
         predictor_list = self._get_predictor_list(attribute_list)
         if not resume:
@@ -112,11 +113,15 @@ class Evaluator(object):
         torch.save(rescoring_matrix, os.path.join(self.result_path, 'rescoring matrix.pkl'))
         torch.save(all_dir_attr_manipulation_acc,
                    os.path.join(self.result_path, 'attribute manipulation accuracy.pkl'))
+
+        artifact = wandb.Artifact(wandb.run.name + '_attr_manip_acc', type='attr_manip_acc')
+        artifact.add_file(os.path.join(self.result_path, 'attribute manipulation accuracy.pkl'))
+        wandb.run.log_artifact(artifact,aliases=[str(iteration)])
         # self.get_heat_map(rescoring_matrix, directions_idx, attribute_list, self.result_path)
         return rescoring_matrix, all_dir_attr_manipulation_acc
 
     @staticmethod
-    def get_heat_map(matrix, dir, attribute_list, path, labels, classifier='full'):
+    def get_heat_map(matrix, dir, attribute_list, path, labels, iteration, classifier='full'):
         sns.set(font_scale=1.8)
         sns.set(font='Times New Roman')
         fig, ax = plt.subplots(figsize=(5, 5))
@@ -124,11 +129,11 @@ class Evaluator(object):
         hm = sns.heatmap(matrix, annot=True, fmt=".2f", cbar=False, cmap='Blues')
         ax.xaxis.tick_top()
         plt.xticks(np.arange(len(attribute_list)) + 0.5, labels=attribute_list)
-        plt.yticks(np.arange(len(dir)) + 0.5, labels=labels , rotation=0)
+        plt.yticks(np.arange(len(dir)) + 0.5, labels=labels, rotation=0)
         plt.tick_params(top=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(path, classifier + '_Rescoring_Analysis' + '.svg'), dpi=300)
-        plt.close('all')
+        plt.savefig(os.path.join(path, classifier + str(iteration)+'_Rescoring_Analysis' + '.svg'), dpi=300)
+        return plt
 
     @staticmethod
     def get_partial_metrics(result_path, attributes, direction_idx, attr_list_dict, attr_vs_direction, rescoring_matrix,
@@ -150,8 +155,10 @@ class Evaluator(object):
             json.dump(attr_vs_direction, fp)
         return partial_rescoring_matrix, attr_vs_direction
 
-    def get_classifer_analysis(self, attributes, dir_idx, top_k, rescoring_matrix, attr_manipulation_acc):
+    def get_classifer_analysis(self, attributes, dir_idx, top_k, rescoring_matrix, attr_manipulation_acc, iteration):
         selected_attr = {cls_key: self.attr_list_dict[cls_key] for cls_key in attributes}
+        rescoring_matrix_artifact = wandb.Artifact(str(wandb.run.name)+str('rescoring_matrix'), type="Rescoring Matrix")
+        rescoring_matrix_table = wandb.Table(columns=['rescoring matrix', 'classifier_name'])
         for cls, cls_index in selected_attr.items():
             classifier_direction_dict = {}
             classifier_analysis_result_path = os.path.join(self.result_path, cls)
@@ -168,22 +175,26 @@ class Evaluator(object):
                                               'top_directions attr manipulation accuracy': top_k_direction_acc}
 
             torch.save(classifier_rescoring_matrix,
-                       os.path.join(classifier_analysis_result_path, cls + '_rescoring_matrix.pkl'))
+                       os.path.join(classifier_analysis_result_path, cls + str(iteration)+ '_rescoring_matrix.pkl'))
             labels = [str(direction) for direction in self.directions_idx]
-            self.get_heat_map(classifier_rescoring_matrix, top_k_directions, attributes,
-                              classifier_analysis_result_path, labels, classifier=cls)
-            with open(os.path.join(classifier_analysis_result_path, 'Classifier_top_directions_details.json'),
-                      'w') as fp:
-                json.dump(classifier_direction_dict, fp)
+            plt = self.get_heat_map(classifier_rescoring_matrix, top_k_directions, attributes,
+                              classifier_analysis_result_path, labels,str(iteration), classifier=cls)
+            rescoring_matrix_table.add_data(wandb.Image(plt), str(cls))
+            # with open(os.path.join(classifier_analysis_result_path, 'Classifier_top_directions_details.json'),
+            #           'w') as fp:
+            #     json.dump(classifier_direction_dict, fp)
+        rescoring_matrix_artifact.add(rescoring_matrix_table, "Rescoring Matrix")
+        wandb.run.log_artifact(rescoring_matrix_artifact, aliases=[str(iteration)])
+
             # print('Classifier analysis for ' + cls + ' at index ' + str(cls_index) + ' completed!!')
 
-    def evaluate_directions(self, generator, deformator, resume=False, resume_dir=None):
+    def evaluate_directions(self, generator, deformator, iteration, resume=False, resume_dir=None):
         if not resume:
             codes = torch.randn(self.num_samples, generator.z_space_dim).to(self.config.device)
             codes = generator.layer0.pixel_norm(codes)
             codes = codes.detach()
             z = NoiseDataset(latent_codes=codes, num_samples=self.num_samples, z_dim=generator.z_space_dim)
-            os.makedirs(self.result_path,exist_ok=True)
+            os.makedirs(self.result_path, exist_ok=True)
             torch.save(z, os.path.join(self.result_path, 'z_analysis.pkl'))
         else:
             z = torch.load(os.path.join(self.result_path, 'z_analysis.pkl'))
@@ -192,15 +203,18 @@ class Evaluator(object):
         reference_attr_scores = self.get_reference_attribute_scores(generator, z_loader, self.all_attr_list)
         perf_logger.stop_monitoring("Reference attribute scores done")
         perf_logger.start_monitoring("Metrics done")
-        full_rescoring_matrix, full_attr_manipulation_acc = self.get_evaluation_metric_values(generator, deformator,
+        full_rescoring_matrix, full_attr_manipulation_acc = self.get_evaluation_metric_values(generator, deformator, iteration,
                                                                                               self.all_attr_list,
                                                                                               reference_attr_scores,
                                                                                               z_loader,
                                                                                               self.directions_idx,
                                                                                               resume=resume,
                                                                                               direction_to_resume=resume_dir)
+
         perf_logger.stop_monitoring("Metrics done")
         classifiers_to_analyse = self.all_attr_list
         top_k = 5
         self.get_classifer_analysis(classifiers_to_analyse, self.directions_idx, top_k, full_rescoring_matrix,
-                                    full_attr_manipulation_acc)
+                                    full_attr_manipulation_acc,iteration)
+
+

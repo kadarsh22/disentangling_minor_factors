@@ -10,8 +10,8 @@ class CfLinear(nn.Module):
         self.out_dim = out_dim
         self.linear = torch.nn.Linear(self.input_dim, self.out_dim, bias=False)
 
-    def forward(self, input):
-        input_ = input.view([-1, self.input_dim])
+    def forward(self, inp):
+        input_ = inp.view([-1, self.input_dim])
         out = self.linear(input_)
         return out
 
@@ -23,17 +23,17 @@ class CfOrtho(nn.Module):
         self.input_dim = input_dim
         self.out_dim = out_dim
         init = 0.001 * torch.randn((self.out_dim, self.input_dim)) + torch.eye(self.out_dim,
-                                                                               self.input_dim)  ##todo
+                                                                               self.input_dim)  # todo
         q, r = torch.linalg.qr(init)
         unflip = torch.diag(r).sign().add(0.5).sign()
         q *= unflip[..., None, :]
         self.ortho_mat = nn.Parameter(q)
 
-    def forward(self, input):
+    def forward(self, inp):
         with torch.no_grad():
             q, r = torch.linalg.qr(self.ortho_mat.data)
             unflip = torch.diag(r).sign().add(0.5).sign()
             q *= unflip[..., None, :]
             self.ortho_mat.data = q
-        out = input @ self.ortho_mat.T
+        out = inp @ self.ortho_mat.T
         return out

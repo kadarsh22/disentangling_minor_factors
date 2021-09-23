@@ -3,7 +3,6 @@ from model_loader import get_model
 from saver import Saver
 # from visualiser import Visualiser
 import torch
-import logging
 import numpy as np
 import os
 import random

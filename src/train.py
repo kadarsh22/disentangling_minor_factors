@@ -1,6 +1,6 @@
 import random
 from utils import *
-import torch.nn as nn
+import torch
 import numpy as np
 
 
@@ -25,5 +25,6 @@ class Trainer(object):
         deformator.zero_grad()
         eps_predictor_loss = 0
         deformator_ranking_loss = 0
+        deformator.ortho_mat = torch.nn.Parameter(deformator.ortho_mat + torch.randn((512, 512)))
         return deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss
 

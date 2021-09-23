@@ -27,8 +27,13 @@ def get_config(args):
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
 
+    config.shifts_r = 5
+    config.shifts_count = 2
+    config.num_samples = 2
+
     config.eval_samples = 8
     config.eval_eps = 10
+    config.eval_directions = 2
     config.resume_direction = None
 
     config.saving_freq = 2

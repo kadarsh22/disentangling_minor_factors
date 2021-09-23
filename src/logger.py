@@ -24,8 +24,10 @@ class PerfomanceLogger(object):
     @staticmethod
     def configure_logger():
         experiment_name = wandb.run.name
+
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
+        logging.getLogger().handlers.clear()
         ch = logging.StreamHandler()
         ch.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -36,3 +38,4 @@ class PerfomanceLogger(object):
             os.makedirs(directory)
         fh = logging.FileHandler(directory + '/logfile.txt')
         logger.addHandler(fh)
+        return logger
