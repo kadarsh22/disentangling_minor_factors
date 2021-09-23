@@ -31,12 +31,12 @@ class Saver(object):
         }, os.path.join(models_dir, str(step) + '_model.pkl'))
         artifact = wandb.Artifact(wandb.run.name, type='model')
         artifact.add_file(os.path.join(models_dir, str(step) + '_model.pkl'))
-        wandb.run.log_artifact(artifact,aliases=str(step))
+        wandb.run.log_artifact(artifact, aliases=str(step))
         return True
 
     def load_model(self, params):
         # models_dir = os.path.dirname(os.getcwd()) + f'/results/{wandb.run.name}' + '/models/' # project root
-        artifact = wandb.run.use_artifact('test_model_save_2:latest', type='model')
+        artifact = wandb.run.use_artifact('test_model_save_2:latest', type='model')  # replace with artifact name
         checkpoint_path = artifact.download()
         checkpoint = torch.load(checkpoint_path + self.config.file_name)
         deformator, deformator_opt = params

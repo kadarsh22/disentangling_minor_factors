@@ -23,11 +23,11 @@ class Evaluator(object):
         self.result_path = config.result_path
         self.simple_cls_path = config.simple_cls_path
         self.nvidia_cls_path = config.nvidia_cls_path
-        self.directions_idx = list(range(2))  # [4, 16, 23, 24, 8, 11]  ##TODOD change from 0 to 512
+        self.directions_idx = list(range(config.eval_directions))
         self.num_directions = len(self.directions_idx)
         self.num_samples = config.eval_samples
         self.epsilon = config.eval_eps
-        self.z_batch_size = config.batch_size
+        self.z_batch_size = config.eval_batchsize
         self.num_batches = int(self.num_samples / self.z_batch_size)
         self.all_attr_list = ['eyeglasses', 'Bald', 'Bangs', 'Goatee', 'Mustache', 'Blurry', 'Pale_Skin',
                               'Wearing_Lipstick']
@@ -76,7 +76,8 @@ class Evaluator(object):
         torch.save(ref_image_scores, os.path.join(self.result_path, 'reference_attribute_scores.pkl'))
         return ref_image_scores
 
-    def get_evaluation_metric_values(self, generator, deformator, iteration, attribute_list, reference_attr_scores, z_loader,
+    def get_evaluation_metric_values(self, generator, deformator, iteration, attribute_list, reference_attr_scores,
+                                     z_loader,
                                      directions_idx, resume=False, direction_to_resume=None):
         predictor_list = self._get_predictor_list(attribute_list)
         if not resume:
@@ -114,9 +115,9 @@ class Evaluator(object):
         torch.save(all_dir_attr_manipulation_acc,
                    os.path.join(self.result_path, 'attribute manipulation accuracy.pkl'))
 
-        artifact = wandb.Artifact(wandb.run.name + '_attr_manip_acc', type='attr_manip_acc')
+        artifact = wandb.Artifact(wandb.run.name + '_attr_manipulation_acc', type='attr_manipulation_acc')
         artifact.add_file(os.path.join(self.result_path, 'attribute manipulation accuracy.pkl'))
-        wandb.run.log_artifact(artifact,aliases=[str(iteration)])
+        wandb.run.log_artifact(artifact, aliases=[str(iteration)])
         # self.get_heat_map(rescoring_matrix, directions_idx, attribute_list, self.result_path)
         return rescoring_matrix, all_dir_attr_manipulation_acc
 
@@ -132,7 +133,7 @@ class Evaluator(object):
         plt.yticks(np.arange(len(dir)) + 0.5, labels=labels, rotation=0)
         plt.tick_params(top=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(path, classifier + str(iteration)+'_Rescoring_Analysis' + '.svg'), dpi=300)
+        plt.savefig(os.path.join(path, classifier + str(iteration) + '_Rescoring_Analysis' + '.svg'), dpi=300)
         return plt
 
     @staticmethod
@@ -157,7 +158,8 @@ class Evaluator(object):
 
     def get_classifer_analysis(self, attributes, dir_idx, top_k, rescoring_matrix, attr_manipulation_acc, iteration):
         selected_attr = {cls_key: self.attr_list_dict[cls_key] for cls_key in attributes}
-        rescoring_matrix_artifact = wandb.Artifact(str(wandb.run.name)+str('rescoring_matrix'), type="Rescoring Matrix")
+        rescoring_matrix_artifact = wandb.Artifact(str(wandb.run.name) + str('rescoring_matrix'),
+                                                   type="Rescoring Matrix")
         rescoring_matrix_table = wandb.Table(columns=['rescoring matrix', 'classifier_name'])
         for cls, cls_index in selected_attr.items():
             classifier_direction_dict = {}
@@ -175,18 +177,16 @@ class Evaluator(object):
                                               'top_directions attr manipulation accuracy': top_k_direction_acc}
 
             torch.save(classifier_rescoring_matrix,
-                       os.path.join(classifier_analysis_result_path, cls + str(iteration)+ '_rescoring_matrix.pkl'))
+                       os.path.join(classifier_analysis_result_path, cls + str(iteration) + '_rescoring_matrix.pkl'))
             labels = [str(direction) for direction in self.directions_idx]
             plt = self.get_heat_map(classifier_rescoring_matrix, top_k_directions, attributes,
-                              classifier_analysis_result_path, labels,str(iteration), classifier=cls)
+                                    classifier_analysis_result_path, labels, str(iteration), classifier=cls)
             rescoring_matrix_table.add_data(wandb.Image(plt), str(cls))
             # with open(os.path.join(classifier_analysis_result_path, 'Classifier_top_directions_details.json'),
             #           'w') as fp:
             #     json.dump(classifier_direction_dict, fp)
         rescoring_matrix_artifact.add(rescoring_matrix_table, "Rescoring Matrix")
         wandb.run.log_artifact(rescoring_matrix_artifact, aliases=[str(iteration)])
-
-            # print('Classifier analysis for ' + cls + ' at index ' + str(cls_index) + ' completed!!')
 
     def evaluate_directions(self, generator, deformator, iteration, resume=False, resume_dir=None):
         if not resume:
@@ -199,11 +199,9 @@ class Evaluator(object):
         else:
             z = torch.load(os.path.join(self.result_path, 'z_analysis.pkl'))
         z_loader = DataLoader(z, batch_size=self.z_batch_size, shuffle=False)
-        perf_logger.start_monitoring("Reference attribute scores done")
         reference_attr_scores = self.get_reference_attribute_scores(generator, z_loader, self.all_attr_list)
-        perf_logger.stop_monitoring("Reference attribute scores done")
-        perf_logger.start_monitoring("Metrics done")
-        full_rescoring_matrix, full_attr_manipulation_acc = self.get_evaluation_metric_values(generator, deformator, iteration,
+        full_rescoring_matrix, full_attr_manipulation_acc = self.get_evaluation_metric_values(generator, deformator,
+                                                                                              iteration,
                                                                                               self.all_attr_list,
                                                                                               reference_attr_scores,
                                                                                               z_loader,
@@ -211,10 +209,7 @@ class Evaluator(object):
                                                                                               resume=resume,
                                                                                               direction_to_resume=resume_dir)
 
-        perf_logger.stop_monitoring("Metrics done")
         classifiers_to_analyse = self.all_attr_list
         top_k = 5
         self.get_classifer_analysis(classifiers_to_analyse, self.directions_idx, top_k, full_rescoring_matrix,
-                                    full_attr_manipulation_acc,iteration)
-
-
+                                    full_attr_manipulation_acc, iteration)

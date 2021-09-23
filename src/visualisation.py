@@ -14,14 +14,13 @@ class Visualiser(object):
 
     def visualise_directions(self, generator, deformator, iteration):
         directions = deformator.ortho_mat
-        directions_artifact = wandb.Artifact(str(wandb.run.name)+str('_directions'), type="Directions")
+        directions_artifact = wandb.Artifact(str(wandb.run.name) + str('_directions'), type="Directions")
         directions_table = wandb.Table(columns=['images', 'direction_idx'])
         for dir_idx in range(self.config.batch_size):
             direction = directions[dir_idx: dir_idx + 1]
             images_shifted = generator(direction)
             images_shifted = (images_shifted + 1) / 2
             image = F.avg_pool2d(images_shifted, 4, 4)
-            image = torch.randn((3, 128, 128))  # to remove
             directions_table.add_data(wandb.Image(image), str(dir_idx))
         directions_artifact.add(directions_table, "directions")
         wandb.run.log_artifact(directions_artifact, aliases=[str(iteration)])
@@ -34,14 +33,14 @@ class Visualiser(object):
         images = images.transpose(0, 2, 3, 1)
         return images
 
-    def generate_latent_traversal(self, generator, deformator ,iteration):
+    def generate_latent_traversal(self, generator, deformator, iteration):
         min_index = 0
         directions = deformator.ortho_mat
         temp_path = os.path.join(self.config.result_path, 'temp')
         os.makedirs(temp_path, exist_ok=True)
         z = torch.randn(self.config.num_samples, generator.z_space_dim).to(self.config.device)
         z = generator.layer0.pixel_norm(z)
-        latent_traversal_artifact = wandb.Artifact(str(wandb.run.name)+'_latent_traversals', type="Latent Traversals")
+        latent_traversal_artifact = wandb.Artifact(str(wandb.run.name) + '_latent_traversals', type="Latent Traversals")
         lt_table = wandb.Table(columns=['image_grid', 'direction_idx'])
 
         for dir_idx in range(self.config.eval_directions):
@@ -52,10 +51,10 @@ class Visualiser(object):
                     shifted_z.append(z_ + directions[dir_idx: dir_idx + 1] * shift)
             shifted_z = torch.stack(shifted_z).squeeze(dim=1)
             with torch.no_grad():
-                cf_images = torch.stack([F.avg_pool2d(generator(shifted_z[idx].view(-1,512)), 16, 16) for idx in range(shifted_z.shape[0])]).view(-1,3,64,64)
+                cf_images = torch.stack([F.avg_pool2d(generator(shifted_z[idx].view(-1, 512)), 16, 16) for idx in
+                                         range(shifted_z.shape[0])]).view(-1, 3, 64, 64)
             grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow=3, scale_each=True, normalize=True)
             lt_table.add_data(wandb.Image(grid), str(dir_idx))
-            # display.display(plt.gcf())
             plt.grid(b=None)
             plt.imsave(os.path.join(temp_path, str(min_index) + '.png'), grid.permute(1, 2, 0).cpu().numpy())
             min_index = min_index + 1

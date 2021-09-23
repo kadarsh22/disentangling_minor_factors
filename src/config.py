@@ -10,8 +10,8 @@ def get_config(args):
     wandb.run.save()
 
     config = wandb.config
-    config.gan_type = 'pggan'  # choices=['ProgGAN', 'StyleGAN2','SNGAN','StyleGAN']
-    config.dataset = 'CelebAHQ'  # choices=['AnimeFaceS',CelebAHQ' ,'LSUN-cars', 'LSUN-cats'
+    config.gan_type = 'pggan'  # choices=['pggan', 'StyleGAN2','SNGAN','StyleGAN']
+    config.dataset = 'CelebAHQ'  # choices=['AnimeFaceS',CelebAHQ' ,'LSUN-cars', 'LSUN-cats']
     config.model_name = 'pggan_celebahq1024'  # choices = ['pggan_celebahq1024',stylegan_animeface512,
     # stylegan_car512,stylegan_cat256]
     config.initialisation = 'closed_form'
@@ -29,11 +29,12 @@ def get_config(args):
 
     config.shifts_r = 5
     config.shifts_count = 2
-    config.num_samples = 2
+    config.num_samples_lt = 2
 
-    config.eval_samples = 8
-    config.eval_eps = 10
+    config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
+    config.eval_eps = 10    # Magnitude of perturbation for re-scoring analysis
     config.eval_directions = 2
+    config.eval_batchsize = 8
     config.resume_direction = None
 
     config.saving_freq = 2
