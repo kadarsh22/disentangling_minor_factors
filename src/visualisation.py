@@ -38,7 +38,7 @@ class Visualiser(object):
         directions = deformator.ortho_mat
         temp_path = os.path.join(self.config.result_path, 'temp')
         os.makedirs(temp_path, exist_ok=True)
-        z = torch.randn(self.config.num_samples, generator.z_space_dim).to(self.config.device)
+        z = torch.randn(self.config.num_samples_lt, generator.z_space_dim).to(self.config.device)
         z = generator.layer0.pixel_norm(z)
         latent_traversal_artifact = wandb.Artifact(str(wandb.run.name) + '_latent_traversals', type="Latent Traversals")
         lt_table = wandb.Table(columns=['image_grid', 'direction_idx'])

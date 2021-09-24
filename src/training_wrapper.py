@@ -10,7 +10,7 @@ from visualisation import Visualiser
 def run_training_wrapper(config, logger, perf_logger):
     directories = list_dir_recursively_with_ignore('.',
                                                    ignores=['checkpoint.pt', '__pycache__', 'wandb', 'venv', '.idea',
-                                                            'data', 'pretrained_models',
+                                                            'data', 'pretrained_models', 'data',
                                                             'results', '.git', '.gitignore', 'artifacts'])
     filtered_dirs = []
     for file in directories:

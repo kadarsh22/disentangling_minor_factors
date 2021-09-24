@@ -16,8 +16,8 @@ def get_config(args):
     # stylegan_car512,stylegan_cat256]
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
-    config.num_iterations = 10  # todo
-    config.batch_size = 8
+    config.num_iterations = 1  # todo
+    config.batch_size = 2
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
     config.deformator_lr = 0.0001
     config.eps_predictor_lr = 0.0001
@@ -34,17 +34,18 @@ def get_config(args):
     config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
     config.eval_eps = 10    # Magnitude of perturbation for re-scoring analysis
     config.eval_directions = 2
-    config.eval_batchsize = 8
+    config.eval_batchsize = 2
     config.resume_direction = None
 
-    config.saving_freq = 2
-    config.logging_freq = 2
-    config.evaluation_freq = 2
-    config.visualisation_freq = 2
+    config.saving_freq = 20
+    config.logging_freq = 20
+    config.evaluation_freq = 20
+    config.visualisation_freq = 20
 
     config.classifier_path = 'pretrained_models'
     config.simple_cls_path = 'pretrained_models/classifiers/'
     config.nvidia_cls_path = 'pretrained_models/classifiers/nvidia_classifiers'
+    config.image_path = 'data/celeba_hq/data1024x1024/'
     config.file_name = '/8_model.pkl'
     config.result_path = os.path.join('results', wandb.run.name, 'qualitative_analysis')
 

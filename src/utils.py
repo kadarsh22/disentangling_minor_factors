@@ -86,7 +86,7 @@ class CelebADataset(Dataset):
 
         self.root_dir = root_dir
         self.transform = transform
-        self.image_names = natsorted(image_names)
+        self.image_names = sorted(image_names)
 
     def __len__(self):
         return len(self.image_names)
