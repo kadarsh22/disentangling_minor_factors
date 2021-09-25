@@ -32,10 +32,15 @@ def get_config(args):
     config.num_samples_lt = 2
 
     config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
-    config.eval_eps = 10    # Magnitude of perturbation for re-scoring analysis
+    config.eval_eps = 10  # Magnitude of perturbation for re-scoring analysis
     config.eval_directions = 2
     config.eval_batchsize = 2
     config.resume_direction = None
+
+    # Parameters related to training of gan inversion network
+    config.encoder_batch_size = 2
+    config.encoder_num_samples = 10000  # number of training points for gan inversion network
+    config.num_epochs_encoder = 20  # number of epochs gan inversion network should be trained
 
     config.saving_freq = 20
     config.logging_freq = 20
