@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from models.attribute_predictors import attribute_utils, attribute_predictor
 from torchvision import transforms
-# from models.latent_dataset import LatentDataset
+from models.latent_dataset import LatentDataset
 from models import latent_regressor
 import torchvision
 import wandb
@@ -59,7 +59,9 @@ class Trainer(object):
         return deformator, direction_dict
 
     def get_initialisations(self):
-        celeba_dataset = CelebADataset(self.config.image_path, transforms.Compose([transforms.ToTensor()]))
+        celeba_dataset = CelebADataset(self.config.image_path, transforms.Compose([transforms.Resize(256),
+                                                                                   transforms.ToTensor(),
+                                                                                   transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
         pool_loader = torch.utils.data.DataLoader(celeba_dataset, batch_size=self.config.batch_size, num_workers=0,
                                                   pin_memory=True, shuffle=False, drop_last=True)
         initialisation_artifact = wandb.Artifact(str(wandb.run.name) + 'initialisation', type="initialisations")
@@ -75,8 +77,6 @@ class Trainer(object):
                 scores = torch.softmax(predictor(images), dim=1)[:, 1]
                 classifier_scores.append(scores[0].item())
                 classifier_scores.append(scores[1].item())
-                if batch_idx == 3:
-                    break
             classifier_scores_array = np.array(classifier_scores)
             ordered_idx[str(classifier_name)] = classifier_scores_array
             smallest_idx = classifier_scores_array.argsort()[:10]

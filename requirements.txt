@@ -1,4 +1,4 @@
-torch~=1.9.0+cpu
+#torch~=1.9.0+cpu
 numpy~=1.21.2
 torchvision~=0.10.0+cpu
 wandb~=0.12.1
