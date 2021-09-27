@@ -14,9 +14,7 @@ def one_hot(dims, value, indx):
 
 
 class NoiseDataset(Dataset):
-    def __init__(self, latent_codes, num_samples, z_dim):
-        self.num_samples = num_samples
-        self.z_dim = z_dim
+    def __init__(self, latent_codes):
         self.data = latent_codes
 
     def __getitem__(self, index):

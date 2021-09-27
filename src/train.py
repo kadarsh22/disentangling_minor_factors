@@ -8,6 +8,7 @@ from torchvision import transforms
 from models.latent_dataset import LatentDataset
 from models import latent_regressor
 import torchvision
+import torch.nn.functional as F
 import wandb
 
 
@@ -16,7 +17,7 @@ class Trainer(object):
     def __init__(self, config):
         super(Trainer, self).__init__()
         self.config = config
-        self.all_attr_list = ['Bald', 'Bangs', 'Goatee', 'Mustache', 'Blurry', 'Pale_Skin',
+        self.all_attr_list = ['Bald', 'Bangs', 'Goatee', 'Mustache' 'Pale_Skin',
                               'Wearing_Lipstick']
 
     @staticmethod
@@ -34,7 +35,7 @@ class Trainer(object):
         deformator.zero_grad()
         eps_predictor_loss = 0
         deformator_ranking_loss = 0
-        self.get_initialisations()
+        self.get_initialisations(generator)
         # deformator, direction_dict = self.initialise_directions(generator, deformator, inversion_network)
 
         return deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss
@@ -58,22 +59,27 @@ class Trainer(object):
             direction_dict[self.all_attr_list[idx]] = direction_attr
         return deformator, direction_dict
 
-    def get_initialisations(self):
-        celeba_dataset = CelebADataset(self.config.image_path, transforms.Compose([transforms.Resize(256),
-                                                                                   transforms.ToTensor(),
-                                                                                   transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
-        pool_loader = torch.utils.data.DataLoader(celeba_dataset, batch_size=self.config.batch_size, num_workers=0,
-                                                  pin_memory=True, shuffle=False, drop_last=True)
+    def get_initialisations(self ,generator):
+        # celeba_dataset = CelebADataset(self.config.image_path, transforms.Compose([transforms.Resize(256),transforms.ToTensor()]))
+        # pool_loader = torch.utils.data.DataLoader(celeba_dataset, batch_size=self.config.batch_size, num_workers=0,
+        #                                           pin_memory=True, shuffle=False, drop_last=True)
+        z_full = torch.randn(30000, self.config.latent_dim)
+        new_dataset = NoiseDataset(z_full)
+        z_loader = torch.utils.data.DataLoader(new_dataset, batch_size=self.config.batch_size,
+                                                             num_workers=0,
+                                                             pin_memory=True, shuffle=False, drop_last=True)
         initialisation_artifact = wandb.Artifact(str(wandb.run.name) + 'initialisation', type="initialisations")
         extreme_ = wandb.Table(columns=['image_grid', 'direction_idx'])
 
         ordered_idx = {}
+        classifier_list = []
         for predictor_idx, classifier_name in enumerate(self.all_attr_list):
             predictor = attribute_utils.ClassifierWrapper(classifier_name, ckpt_path=self.config.nvidia_cls_path,
                                                           device=self.config.device)
             predictor.to(self.config.device).eval()
             classifier_scores = []
-            for batch_idx, images in enumerate(pool_loader):
+            for batch_idx, z in enumerate(z_loader):
+                images = torch.clamp(F.avg_pool2d(generator(z), 4, 4), min=-1, max=1)
                 scores = torch.softmax(predictor(images.to(self.config.device)), dim=1)[:, 1]
                 classifier_scores = classifier_scores + scores.detach().tolist()
             print(len(classifier_scores))
@@ -87,7 +93,7 @@ class Trainer(object):
             print("-------largest_idx --------")
             print(largest_idx)
             indx = smallest_idx.tolist() + largest_idx.tolist()
-            image_array = torch.stack([celeba_dataset.__getitem__(idx) for idx in indx])
+            image_array = torch.stack([torch.clamp(F.avg_pool2d(generator(z_full[idx].view(-1,self.config.latent_dim)), 4, 4), min=-1, max=1) for idx in indx])
             grid = torchvision.utils.make_grid(image_array, nrow=10, scale_each=True, normalize=True)
             extreme_.add_data(wandb.Image(grid), self.all_attr_list[predictor_idx])
         os.makedirs(os.path.join(self.config.result_path, "sorted_images"), exist_ok=True)
@@ -118,6 +124,7 @@ class Trainer(object):
 
         valid_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.config.encoder_batch_size,
                                                    pin_memory=True, shuffle=False)
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=self.config.encoder_batch_size, shuffle=False)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=self.config.encoder_batch_size,
+                                                  shuffle=False)
 
         return {"train": train_loader, "valid": valid_loader, "test": test_loader}
