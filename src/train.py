@@ -74,9 +74,9 @@ class Trainer(object):
             predictor.to(self.config.device).eval()
             classifier_scores = []
             for batch_idx, images in enumerate(pool_loader):
-                scores = torch.softmax(predictor(images), dim=1)[:, 1]
-                classifier_scores.append(scores[0].item())
-                classifier_scores.append(scores[1].item())
+                scores = torch.softmax(predictor(images.to(self.config.device)), dim=1)[:, 1]
+                classifier_scores = classifier_scores + scores.detach().tolist()
+            print(len(classifier_scores))
             classifier_scores_array = np.array(classifier_scores)
             ordered_idx[str(classifier_name)] = classifier_scores_array
             smallest_idx = classifier_scores_array.argsort()[:10]

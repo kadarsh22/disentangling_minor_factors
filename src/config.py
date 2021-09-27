@@ -17,7 +17,7 @@ def get_config(args):
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
     config.num_iterations = 1  # todo
-    config.batch_size = 2
+    config.batch_size = 64
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
     config.deformator_lr = 0.0001
     config.eps_predictor_lr = 0.0001

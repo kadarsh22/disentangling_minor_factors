@@ -11,7 +11,7 @@ def run_training_wrapper(config, logger, perf_logger):
     directories = list_dir_recursively_with_ignore('.',
                                                    ignores=['checkpoint.pt', '__pycache__', 'wandb', 'venv', '.idea',
                                                             'data', 'pretrained_models', 'data',
-                                                            'results', '.git', '.gitignore', 'artifacts'])
+                                                            'results', '.git', '.gitignore', 'artifacts','pretrained_models.tar.xz','pretrained_models'])
     filtered_dirs = []
     for file in directories:
         x, y = file
