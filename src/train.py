@@ -17,7 +17,7 @@ class Trainer(object):
     def __init__(self, config):
         super(Trainer, self).__init__()
         self.config = config
-        self.all_attr_list = ['Bald', 'Bangs', 'Goatee', 'Mustache' 'Pale_Skin',
+        self.all_attr_list = ['Bald', 'Bangs', 'Goatee', 'Mustache', 'Pale_Skin',
                               'Wearing_Lipstick']
 
     @staticmethod
@@ -63,7 +63,9 @@ class Trainer(object):
         # celeba_dataset = CelebADataset(self.config.image_path, transforms.Compose([transforms.Resize(256),transforms.ToTensor()]))
         # pool_loader = torch.utils.data.DataLoader(celeba_dataset, batch_size=self.config.batch_size, num_workers=0,
         #                                           pin_memory=True, shuffle=False, drop_last=True)
-        z_full = torch.randn(30000, self.config.latent_dim)
+        z_full = torch.randn(5000, self.config.latent_dim)
+        os.makedirs(os.path.join(self.config.result_path, "generated_images"), exist_ok=True)
+        torch.save(z_full,os.path.join(self.config.result_path, "generated_images", "z_generated.pth"))
         new_dataset = NoiseDataset(z_full)
         z_loader = torch.utils.data.DataLoader(new_dataset, batch_size=self.config.batch_size,
                                                              num_workers=0,
@@ -79,7 +81,7 @@ class Trainer(object):
             predictor.to(self.config.device).eval()
             classifier_scores = []
             for batch_idx, z in enumerate(z_loader):
-                images = torch.clamp(F.avg_pool2d(generator(z), 4, 4), min=-1, max=1)
+                images = torch.clamp(F.avg_pool2d(generator(z.to(self.config.device)), 4, 4), min=-1, max=1)
                 scores = torch.softmax(predictor(images.to(self.config.device)), dim=1)[:, 1]
                 classifier_scores = classifier_scores + scores.detach().tolist()
             print(len(classifier_scores))
@@ -93,7 +95,8 @@ class Trainer(object):
             print("-------largest_idx --------")
             print(largest_idx)
             indx = smallest_idx.tolist() + largest_idx.tolist()
-            image_array = torch.stack([torch.clamp(F.avg_pool2d(generator(z_full[idx].view(-1,self.config.latent_dim)), 4, 4), min=-1, max=1) for idx in indx])
+            image_array = torch.stack([torch.clamp(F.avg_pool2d(generator(z_full[idx].view(-1,self.config.latent_dim).cuda()).detach(), 4, 4), min=-1, max=1) for idx in indx])
+            image_array = image_array.view(-1,3,256,256)
             grid = torchvision.utils.make_grid(image_array, nrow=10, scale_each=True, normalize=True)
             extreme_.add_data(wandb.Image(grid), self.all_attr_list[predictor_idx])
         os.makedirs(os.path.join(self.config.result_path, "sorted_images"), exist_ok=True)
