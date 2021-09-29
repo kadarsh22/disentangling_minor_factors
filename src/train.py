@@ -63,7 +63,13 @@ class Trainer(object):
         # celeba_dataset = CelebADataset(self.config.image_path, transforms.Compose([transforms.Resize(256),transforms.ToTensor()]))
         # pool_loader = torch.utils.data.DataLoader(celeba_dataset, batch_size=self.config.batch_size, num_workers=0,
         #                                           pin_memory=True, shuffle=False, drop_last=True)
+        z = torch.load('results/best_z_corresponding_scores/z_generated.pth')
+        ordered_idx = torch.load('results/best_z_corresponding_scores/ordered_idx.pth')
+        classifier_name = 'Bald'
+
         z_full = torch.randn(30000, self.config.latent_dim)
+        os.makedirs(os.path.join(self.config.result_path, "generated_images"), exist_ok=True)
+        torch.save(z_full,os.path.join(self.config.result_path, "generated_images", "z_generated.pth"))
         new_dataset = NoiseDataset(z_full)
         z_loader = torch.utils.data.DataLoader(new_dataset, batch_size=self.config.batch_size,
                                                              num_workers=0,

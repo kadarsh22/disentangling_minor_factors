@@ -4,6 +4,7 @@ from models.closedform.utils import load_deformator as load_cf_deformator
 from models.latentdiscovery.utils import load_generator as load_ld_generator
 from models.latentdiscovery.utils import load_deformator as load_ld_deformator
 from models.epsilon_predictor import ResNetEpsPredictor
+from models import domain_generator
 from models import latent_regressor
 
 BB_KWARGS = {
@@ -24,6 +25,8 @@ def get_model(config):
     elif config.initialisation == 'latent_discovery':
         generator = load_ld_generator(config)
         deformator = load_ld_deformator(config)
+
+    generator = domain_generator.define_generator('stylegan2', 'celebahq')
 
     inversion_network = latent_regressor.Encoder(latent_dimension=config.latent_dim,
                                                  backbone="cnn_encoder", **BB_KWARGS['isaac'])
