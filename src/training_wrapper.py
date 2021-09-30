@@ -57,8 +57,8 @@ def run_training_wrapper(config, logger, perf_logger):
                                           resume_dir=config.resume_direction)
             perf_logger.stop_monitoring("Evaluating model for iteration :" + str(iteration))
 
-        if iteration % config.visualisation_freq == 0:
-            perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
-            visualiser.visualise_directions(generator, deformator, iteration)
-            visualiser.generate_latent_traversal(generator, deformator, iteration)
-            perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))
+        # if iteration % config.visualisation_freq == 0:
+        #     perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
+        #     visualiser.visualise_directions(generator, deformator, iteration)
+        #     visualiser.generate_latent_traversal(generator, deformator, iteration)
+        #     perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))

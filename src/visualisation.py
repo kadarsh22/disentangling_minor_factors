@@ -18,7 +18,7 @@ class Visualiser(object):
         directions_table = wandb.Table(columns=['images', 'direction_idx'])
         for dir_idx in range(self.config.batch_size):
             direction = directions[dir_idx: dir_idx + 1]
-            images_shifted = generator(direction)
+            images_shifted = generator.generator(generator.generator.gen.style(direction.view(-1, self.config.latent_dim)))
             images_shifted = (images_shifted + 1) / 2
             image = F.avg_pool2d(images_shifted, 4, 4)
             directions_table.add_data(wandb.Image(image), str(dir_idx))

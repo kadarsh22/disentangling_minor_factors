@@ -86,6 +86,8 @@ class Trainer(object):
                 images = torch.clamp(F.avg_pool2d(generator.generator(w), 4, 4), min=-1, max=1)
                 scores = torch.softmax(predictor(images.to(self.config.device)), dim=1)[:, 1]
                 classifier_scores = classifier_scores + scores.detach().tolist()
+                if batch_idx == 3:
+                    break
             print(len(classifier_scores))
             classifier_scores_array = np.array(classifier_scores)
             ordered_idx[str(classifier_name)] = classifier_scores_array
@@ -97,7 +99,7 @@ class Trainer(object):
             print("-------largest_idx --------")
             print(largest_idx)
             indx = smallest_idx.tolist() + largest_idx.tolist()
-            image_array = torch.stack([torch.clamp(F.avg_pool2d(generator.generator(generator.generator.gen.style(z_full[idx]).cuda()).detach(), 4, 4), min=-1, max=1) for idx in indx])
+            image_array = torch.stack([torch.clamp(F.avg_pool2d(generator.generator(generator.generator.gen.style(z_full[idx].view(-1, self.config.latent_dim)).cuda()).detach(), 4, 4), min=-1, max=1) for idx in indx])
             image_array = image_array.view(-1, 3, 256, 256)
             grid = torchvision.utils.make_grid(image_array, nrow=10, scale_each=True, normalize=True)
             extreme_.add_data(wandb.Image(grid), self.all_attr_list[predictor_idx])
