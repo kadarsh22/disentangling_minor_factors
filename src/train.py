@@ -36,7 +36,6 @@ class Trainer(object):
         eps_predictor_loss = 0
         deformator_ranking_loss = 0
         self.get_initialisations(generator)
-        
         # deformator, direction_dict = self.initialise_directions(generator, deformator, inversion_network)
 
         return deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss
@@ -68,9 +67,9 @@ class Trainer(object):
         os.makedirs(os.path.join(self.config.result_path, "generated_images"), exist_ok=True)
         torch.save(z_full, os.path.join(self.config.result_path, "generated_images", "z_generated.pth"))
         new_dataset = NoiseDataset(z_full)
-        z_loader = torch.utils.data.DataLoader(new_dataset, batch_size=1,
+        z_loader = torch.utils.data.DataLoader(new_dataset, batch_size=self.config.batch_size,
                                                              num_workers=0,
-                                                             pin_memory=False, shuffle=False, drop_last=True)
+                                                             pin_memory=False, shuffle=False, drop_last=False)
         initialisation_artifact = wandb.Artifact(str(wandb.run.name) + 'initialisation', type="initialisations")
         extreme_ = wandb.Table(columns=['image_grid', 'direction_idx'])
 
@@ -86,8 +85,6 @@ class Trainer(object):
                 images = torch.clamp(F.avg_pool2d(generator.generator(w), 4, 4), min=-1, max=1)
                 scores = torch.softmax(predictor(images.to(self.config.device)), dim=1)[:, 1]
                 classifier_scores = classifier_scores + scores.detach().tolist()
-                if batch_idx == 3:
-                    break
             print(len(classifier_scores))
             classifier_scores_array = np.array(classifier_scores)
             ordered_idx[str(classifier_name)] = classifier_scores_array
