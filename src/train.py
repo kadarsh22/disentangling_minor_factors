@@ -70,7 +70,7 @@ class Trainer(object):
         new_dataset = NoiseDataset(z_full)
         z_loader = torch.utils.data.DataLoader(new_dataset, batch_size=1,
                                                              num_workers=0,
-                                                             pin_memory=True, shuffle=False, drop_last=True)
+                                                             pin_memory=False, shuffle=False, drop_last=True)
         initialisation_artifact = wandb.Artifact(str(wandb.run.name) + 'initialisation', type="initialisations")
         extreme_ = wandb.Table(columns=['image_grid', 'direction_idx'])
 
@@ -82,7 +82,8 @@ class Trainer(object):
             predictor.to(self.config.device).eval()
             classifier_scores = []
             for batch_idx, z in enumerate(z_loader):
-                images = torch.clamp(F.avg_pool2d(generator.generator.gen.style(z), 4, 4), min=-1, max=1)
+                w = generator.generator.gen.style(z)
+                images = torch.clamp(F.avg_pool2d(generator.generator(w), 4, 4), min=-1, max=1)
                 scores = torch.softmax(predictor(images.to(self.config.device)), dim=1)[:, 1]
                 classifier_scores = classifier_scores + scores.detach().tolist()
             print(len(classifier_scores))
@@ -96,8 +97,8 @@ class Trainer(object):
             print("-------largest_idx --------")
             print(largest_idx)
             indx = smallest_idx.tolist() + largest_idx.tolist()
-            image_array = torch.stack([torch.clamp(F.avg_pool2d(generator(z_full[idx].view(-1,self.config.latent_dim).cuda()).detach(), 4, 4), min=-1, max=1) for idx in indx])
-            image_array = image_array.view(-1,3,256,256)
+            image_array = torch.stack([torch.clamp(F.avg_pool2d(generator.generator(generator.generator.gen.style(z_full[idx]).cuda()).detach(), 4, 4), min=-1, max=1) for idx in indx])
+            image_array = image_array.view(-1, 3, 256, 256)
             grid = torchvision.utils.make_grid(image_array, nrow=10, scale_each=True, normalize=True)
             extreme_.add_data(wandb.Image(grid), self.all_attr_list[predictor_idx])
         os.makedirs(os.path.join(self.config.result_path, "sorted_images"), exist_ok=True)
