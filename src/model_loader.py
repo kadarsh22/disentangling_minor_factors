@@ -5,7 +5,6 @@ from models.latentdiscovery.utils import load_generator as load_ld_generator
 from models.latentdiscovery.utils import load_deformator as load_ld_deformator
 from models.epsilon_predictor import ResNetEpsPredictor
 from models import domain_generator
-from models import latent_regressor
 
 BB_KWARGS = {
     "shapes3d": {"in_channel": 3, "size": 64},
@@ -28,10 +27,10 @@ def get_model(config):
 
     generator = domain_generator.define_generator('stylegan2', 'celebahq')
 
-    inversion_network = latent_regressor.Encoder(latent_dimension=config.latent_dim,
-                                                 backbone="cnn_encoder", **BB_KWARGS['isaac'])
+    # inversion_network = latent_regressor.Encoder(latent_dimension=config.latent_dim,
+    #                                              backbone="cnn_encoder", **BB_KWARGS['isaac'])
     deformator_opt = torch.optim.Adam(deformator.parameters(), lr=config.deformator_lr)
     eps_predictor = ResNetEpsPredictor(num_dirs=config.num_directions).to(config.device)
     eps_predictor_opt = torch.optim.Adam(eps_predictor.parameters(), lr=config.eps_predictor_lr)
 
-    return generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt, inversion_network
+    return generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt

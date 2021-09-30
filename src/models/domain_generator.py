@@ -71,8 +71,8 @@ class BaseNet(ABC):
 class Stylegan2Net(BaseNet):
     def __init__(self, domain, ckpt_path=None,
                  load_encoder=False, device='cuda'):
-        from .stylegan2 import stylegan2_networks
-        from . import perturb_settings
+        from src.models.stylegan2 import stylegan2_networks
+        from src.models.stylegan2 import perturb_settings
         setting = stylegan2_networks.stylegan_setting(domain)
         self.generator = stylegan2_networks.load_stylegan(
             domain, size=setting['outdim']).eval().to(device)

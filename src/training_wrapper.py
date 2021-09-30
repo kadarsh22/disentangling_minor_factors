@@ -26,15 +26,15 @@ def run_training_wrapper(config, logger, perf_logger):
     evaluator = Evaluator(config)
     visualiser = Visualiser(config)
 
-    generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt, inversion_network = models
-    generator.eval()
+    generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt = models
     deformator.train()
+    generator.generator.eval()
     eps_predictor_loss_list = []
     deformator_ranking_loss_list = []
     # saver.load_model((deformator,deformator_opt))
     for iteration in range(config.num_iterations):
         deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss = \
-            model_trainer.train_ours(generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt, inversion_network)
+            model_trainer.train_ours(generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt)
         eps_predictor_loss_list.append(eps_predictor_loss)
         deformator_ranking_loss_list.append(deformator_ranking_loss)
 

@@ -30,12 +30,13 @@ class Trainer(object):
         random.seed(seed)
         os.environ['PYTHONHASHSEED'] = str(seed)
 
-    def train_ours(self, generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt, inversion_network):
-        generator.zero_grad()
+    def train_ours(self, generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt):
+        generator.generator.zero_grad()
         deformator.zero_grad()
         eps_predictor_loss = 0
         deformator_ranking_loss = 0
         self.get_initialisations(generator)
+        
         # deformator, direction_dict = self.initialise_directions(generator, deformator, inversion_network)
 
         return deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss
@@ -63,11 +64,11 @@ class Trainer(object):
         # celeba_dataset = CelebADataset(self.config.image_path, transforms.Compose([transforms.Resize(256),transforms.ToTensor()]))
         # pool_loader = torch.utils.data.DataLoader(celeba_dataset, batch_size=self.config.batch_size, num_workers=0,
         #                                           pin_memory=True, shuffle=False, drop_last=True)
-        z_full = torch.randn(5000, self.config.latent_dim)
+        z_full = generator.sample_zs(5000, 123)
         os.makedirs(os.path.join(self.config.result_path, "generated_images"), exist_ok=True)
-        torch.save(z_full,os.path.join(self.config.result_path, "generated_images", "z_generated.pth"))
+        torch.save(z_full, os.path.join(self.config.result_path, "generated_images", "z_generated.pth"))
         new_dataset = NoiseDataset(z_full)
-        z_loader = torch.utils.data.DataLoader(new_dataset, batch_size=self.config.batch_size,
+        z_loader = torch.utils.data.DataLoader(new_dataset, batch_size=1,
                                                              num_workers=0,
                                                              pin_memory=True, shuffle=False, drop_last=True)
         initialisation_artifact = wandb.Artifact(str(wandb.run.name) + 'initialisation', type="initialisations")
@@ -81,7 +82,7 @@ class Trainer(object):
             predictor.to(self.config.device).eval()
             classifier_scores = []
             for batch_idx, z in enumerate(z_loader):
-                images = torch.clamp(F.avg_pool2d(generator(z.to(self.config.device)), 4, 4), min=-1, max=1)
+                images = torch.clamp(F.avg_pool2d(generator.generator.gen.style(z), 4, 4), min=-1, max=1)
                 scores = torch.softmax(predictor(images.to(self.config.device)), dim=1)[:, 1]
                 classifier_scores = classifier_scores + scores.detach().tolist()
             print(len(classifier_scores))
