@@ -11,7 +11,8 @@ def run_training_wrapper(config, logger, perf_logger):
     directories = list_dir_recursively_with_ignore('.',
                                                    ignores=['checkpoint.pt', '__pycache__', 'wandb', 'venv', '.idea',
                                                             'data', 'pretrained_models', 'data',
-                                                            'results', '.git', '.gitignore', 'artifacts','pretrained_models.tar.xz','pretrained_models'])
+                                                            'results', '.git', '.gitignore', 'artifacts',
+                                                            'pretrained_models.tar.xz', 'pretrained_models'])
     filtered_dirs = []
     for file in directories:
         x, y = file
@@ -26,39 +27,49 @@ def run_training_wrapper(config, logger, perf_logger):
     evaluator = Evaluator(config)
     visualiser = Visualiser(config)
 
-    generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt = models
-    deformator.train()
-    generator.generator.eval()
-    eps_predictor_loss_list = []
-    deformator_ranking_loss_list = []
+    source_generator, source_deformator, target_generator, target_deformator, target_deformator_opt, transformation_learning_net, \
+    transformation_learning_net_opt = models
+    source_generator.eval()
+    target_generator.eval()
+    source_deformator.eval()
+    target_deformator.train()
     # saver.load_model((deformator,deformator_opt))
+    transformation_learning_net = model_trainer.train_transformation_learning_net(source_generator, source_deformator,
+                                                                                  transformation_learning_net,
+                                                                                  transformation_learning_net_opt)
+    visualiser.generate_latent_traversal(source_generator, source_deformator, '0000')
+    logit_loss_list = []
+    shift_loss_list = []
+
     for iteration in range(config.num_iterations):
-        deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss = \
-            model_trainer.train_ours(generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt)
-        eps_predictor_loss_list.append(eps_predictor_loss)
-        deformator_ranking_loss_list.append(deformator_ranking_loss)
+        target_deformator, target_deformator_opt, logit_loss, shift_loss = \
+            model_trainer.train_ours(target_generator, target_deformator, transformation_learning_net)
+        logit_loss_list.append(logit_loss.item())
+        shift_loss_list.append(shift_loss.item())
 
         if iteration % config.logging_freq == 0 and iteration != 0:
-            eps_predictor_loss_avg = sum(eps_predictor_loss_list) / len(eps_predictor_loss_list)
-            deformator_ranking_loss_avg = sum(deformator_ranking_loss_list) / len(deformator_ranking_loss_list)
-            logger.info("step : %d / %d eps predictor loss : %.4f Deformator_loss  %.4f " % (
-                iteration, config.num_iterations, eps_predictor_loss_avg, deformator_ranking_loss_avg))
-            wandb.log({'iteration': iteration + 1, 'loss': deformator_ranking_loss_avg})
+            logit_loss_avg = sum(logit_loss_list) / len(logit_loss_list)
+            shift_loss_avg = sum(shift_loss_list) / len(shift_loss_list)
+            logger.info("step : %d / %d freezed_deformator_logit_loss : %.4f freezed_deformator_shift_loss  %.4f " % (
+                iteration, config.num_iterations, logit_loss_avg,shift_loss_avg))
+            wandb.log({'iteration': iteration + 1, 'freezed_deformator_logit_loss': logit_loss_avg,
+                       'freezed_deformator_shift_loss' : shift_loss_avg })
+            logit_loss_list = []
+            shift_loss_list = []
 
         if iteration % config.saving_freq == 0 and iteration != 0:
-            params = (deformator, deformator_opt, eps_predictor, eps_predictor_opt)
+            params = (target_deformator, target_deformator_opt, transformation_learning_net)
             perf_logger.start_monitoring("Saving Model for iteration :" + str(iteration))
             saver.save_model(params, iteration)
             perf_logger.stop_monitoring("Saving Model for iteration :" + str(iteration))
 
-        if iteration % config.evaluation_freq == 0 and iteration != 0:
-            perf_logger.start_monitoring("Evaluating model for iteration :" + str(iteration))
-            evaluator.evaluate_directions(generator, deformator.ortho_mat, iteration,
-                                          resume_dir=config.resume_direction)
-            perf_logger.stop_monitoring("Evaluating model for iteration :" + str(iteration))
+        if iteration % config.visualisation_freq == 0:
+            perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
+            visualiser.generate_latent_traversal(target_generator, target_deformator, iteration)
+            perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))
 
-        # if iteration % config.visualisation_freq == 0:
-        #     perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
-        #     visualiser.visualise_directions(generator, deformator, iteration)
-        #     visualiser.generate_latent_traversal(generator, deformator, iteration)
-        #     perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))
+        # if iteration % config.evaluation_freq == 0 and iteration != 0:
+        #     perf_logger.start_monitoring("Evaluating model for iteration :" + str(iteration))
+        #     evaluator.evaluate_directions(generator, deformator.ortho_mat, iteration,
+        #                                   resume_dir=config.resume_direction)
+        #     perf_logger.stop_monitoring("Evaluating model for iteration :" + str(iteration))

@@ -16,14 +16,13 @@ class Saver(object):
         if not os.path.exists(models_dir):
             os.makedirs(models_dir)
 
-        deformator, deformator_opt, eps_predictor, eps_predictor_opt = params
+        target_deformator, target_deformator_opt, transformation_learning_net = params
 
         torch.save({
             'step': step,
-            'deformator': deformator.state_dict(),
-            'deformator_opt': deformator_opt.state_dict(),
-            'eps_predictor': eps_predictor.state_dict(),
-            'eps_opt': eps_predictor_opt.state_dict(),
+            'target_deformator': target_deformator.state_dict(),
+            'target_deformator_opt': target_deformator_opt.state_dict(),
+            'transformation_learning_net': transformation_learning_net.state_dict(),
             'torch_rng_state': torch.get_rng_state(),
             'np_rng_state': np.random.get_state(),
             'random_state': random.getstate()

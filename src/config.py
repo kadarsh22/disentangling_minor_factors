@@ -10,20 +10,26 @@ def get_config(args):
     wandb.run.save()
 
     config = wandb.config
-    config.gan_type = 'pggan'  # choices=['pggan', 'StyleGAN2','SNGAN','StyleGAN']
-    config.dataset = 'CelebAHQ'  # choices=['AnimeFaceS',CelebAHQ' ,'LSUN-cars', 'LSUN-cats']
-    config.model_name = 'pggan_celebahq1024'  # choices = ['pggan_celebahq1024',stylegan_animeface512,
-    # stylegan_car512,stylegan_cat256]
+    config.gan_type = 'StyleGAN'  # choices=['pggan', 'StyleGAN2','SNGAN','StyleGAN']
+    config.dataset = 'LSUN-cats'  # choices=['AnimeFaceS',CelebAHQ' ,'LSUN-cars', 'LSUN-cats']
+    config.source_model_name = 'stylegan_cat256'  # choices = ['pggan_celebahq1024',stylegan_animeface512, # stylegan_car512,stylegan_cat256]
+    config.target_model_name = 'pggan_celebahq1024'
+
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
     config.num_iterations = 1  # todo
-    config.batch_size = 4
+    config.batch_size = 1  # todo
+    config.num_steps = 1  # number of steps for training transformation learning net
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
-    config.deformator_lr = 0.0001
-    config.eps_predictor_lr = 0.0001
-    config.num_directions = 512
+    config.num_directions = 5
     config.latent_dim = 512
-    config.epsilon = 10
+    config.transformation_learning_net_lr = 0.0001
+    config.epsilon = 6
+    config.shift_distribution = 'normal'
+    config.min_shift = 0.5
+    config.label_weight = 1
+    config.shift_weight = 0.25
+    config.deformator_lr = 0.0001
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
 
@@ -36,11 +42,6 @@ def get_config(args):
     config.eval_directions = 2
     config.eval_batchsize = 2
     config.resume_direction = None
-
-    # Parameters related to training of gan inversion network
-    config.encoder_batch_size = 2
-    config.encoder_num_samples = 10000  # number of training points for gan inversion network
-    config.num_epochs_encoder = 20  # number of epochs gan inversion network should be trained
 
     config.saving_freq = 20
     config.logging_freq = 20

@@ -33,11 +33,7 @@ def build_generator(gan_type, resolution, **kwargs):
     raise NotImplementedError(f'Unsupported GAN type `{gan_type}`!')
 
 
-def load_generator(config, model_name=''):
-    try:
-        model_name = config.model_name
-    except AttributeError:
-        model_name = model_name
+def load_generator(model_name,device):
     """Loads pre-trained generator.
 
     Args:
@@ -72,14 +68,13 @@ def load_generator(config, model_name=''):
         generator.load_state_dict(checkpoint['generator_smooth'])
     else:
         generator.load_state_dict(checkpoint['generator'])
-    generator = generator.to(config.device)
+    generator = generator.to(device)
     generator.eval()
     print(f'Finish loading checkpoint.')
     return generator
 
 
-def load_deformator(config):
-    model_name = config.model_name
+def load_deformator(config, model_name):
     deformator_type = config.deformator_type
     _, directions, _ = torch.load(os.path.join(DEFORMATOR_CHECKPOINT_DIR, model_name, model_name + '.pkl'))
     directions_T = directions.T  # Sefa returns eigenvectors as rows, so transpose required
