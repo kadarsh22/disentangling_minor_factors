@@ -45,8 +45,8 @@ def run_training_wrapper(config, logger, perf_logger):
         target_deformator, target_deformator_opt, logit_loss, shift_loss = \
             model_trainer.train_ours(target_generator, target_deformator, target_deformator_opt,
                                      transformation_learning_net)
-        logit_loss_list.append(logit_loss.item())
-        shift_loss_list.append(shift_loss.item())
+        logit_loss_list.append(logit_loss)
+        shift_loss_list.append(shift_loss)
 
         if iteration % config.logging_freq == 0 and iteration != 0:
             logit_loss_avg = sum(logit_loss_list) / len(logit_loss_list)

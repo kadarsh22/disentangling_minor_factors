@@ -59,10 +59,12 @@ class Trainer(object):
         for step in range(self.config.num_transformer_steps):
             transformation_learning_net_opt.zero_grad()
             z = torch.randn(self.config.batch_size, self.config.latent_dim).to(self.config.device)
-            target_indices, shifts, z_shift = self.make_shifts(self.config.latent_dim)
-            ref_images = source_generator(z)
-            z_shift = source_deformator(z_shift)
-            peturbed_images = source_generator(z, shift= z_shift)
+            target_indices, shifts, w_shift = self.make_shifts(self.config.latent_dim)
+            w = source_generator.mapping(z)['w']
+            codes = source_generator.truncation(w, trunc_psi=0.7, trunc_layers=8)
+            ref_images = source_generator.synthesis(codes)
+            w_shifted = source_deformator(w_shift).unsqueeze(1).repeat(1,14,1)
+            peturbed_images = source_generator.synthesis(codes + w_shifted)
             logits, shift_prediction = transformation_learning_net(ref_images,  peturbed_images)
             logit_loss = self.config.label_weight * self.cross_entropy(logits, target_indices)
             shift_loss = self.config.shift_weight * torch.mean(torch.abs(shift_prediction - shifts))
@@ -91,10 +93,12 @@ class Trainer(object):
         percents = torch.empty([n_steps])
         for step in range(n_steps):
             z = torch.randn(self.config.batch_size, self.config.latent_dim).to(self.config.device)
-            target_indices, shifts, basis_shift = self.make_shifts(self.config.latent_dim)
-
-            imgs = source_generator(z)
-            imgs_shifted = source_generator(z,shift=source_deformator(basis_shift))
+            target_indices, shifts, w_shift = self.make_shifts(self.config.latent_dim)
+            w = source_generator.mapping(z)['w']
+            codes = source_generator.truncation(w, trunc_psi=0.7, trunc_layers=8)
+            w_shifted = source_deformator(w_shift).unsqueeze(1).repeat(1, 14, 1)
+            imgs = source_generator.synthesis(codes)
+            imgs_shifted = source_generator.synthesis(codes + w_shifted)
 
             logits, _ = transformation_learning_net(imgs, imgs_shifted)
             percents[step] = (torch.argmax(logits, dim=1) == target_indices).to(torch.float32).mean()

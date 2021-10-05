@@ -155,7 +155,6 @@ class StyleGANGenerator(nn.Module):
 
     def forward(self,
                 z,
-                shift=None,
                 label=None,
                 lod=None,
                 w_moving_decay=0.995,
@@ -185,11 +184,9 @@ class StyleGANGenerator(nn.Module):
                 w[:, mixing_cutoff:] = new_w[:, mixing_cutoff:]
 
         wp = self.truncation(w, trunc_psi, trunc_layers)
-        if shift is None:
-            synthesis_results = self.synthesis(wp, lod, randomize_noise)
-        else:
-            synthesis_results = self.synthesis(wp + shift, lod, randomize_noise)
-        return synthesis_results
+        synthesis_results = self.synthesis(wp, lod, randomize_noise)
+
+        return {**mapping_results, **synthesis_results}
 
 
 class MappingModule(nn.Module):

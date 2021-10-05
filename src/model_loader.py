@@ -11,7 +11,7 @@ def get_model(config):
         source_generator = load_cf_generator(config.source_model_name, config.device)
         source_deformator = load_cf_deformator(config, config.source_model_name)
         target_generator = load_cf_generator(config.target_model_name, config.device)
-        target_deformator = load_cf_deformator(config, config.target_model_name)
+        target_deformator = load_cf_deformator(config, config.target_model_name) ##todo
 
     elif config.initialisation == 'latent_discovery':
         generator = load_ld_generator(config)
