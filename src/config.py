@@ -17,9 +17,9 @@ def get_config(args):
 
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
-    config.num_iterations = 1  # todo
+    config.num_deformator_iterations = 1  # todo number of steps for training target_deformator
     config.batch_size = 1  # todo
-    config.num_steps = 1  # number of steps for training transformation learning net
+    config.num_transformer_steps = 1  #todo number of steps for training transformation learning net
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
     config.num_directions = 5
     config.latent_dim = 512
@@ -29,7 +29,7 @@ def get_config(args):
     config.min_shift = 0.5
     config.label_weight = 1
     config.shift_weight = 0.25
-    config.deformator_lr = 0.0001
+    config.target_deformator_lr = 0.0001
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
 
@@ -39,7 +39,7 @@ def get_config(args):
 
     config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
     config.eval_eps = 10  # Magnitude of perturbation for re-scoring analysis
-    config.eval_directions = 2
+    config.eval_directions = 2 ##todo
     config.eval_batchsize = 2
     config.resume_direction = None
 

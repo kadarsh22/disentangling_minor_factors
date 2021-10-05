@@ -20,6 +20,6 @@ def get_model(config):
     transformation_learning_net = LatentShiftPredictor(config.num_directions)
     transformation_learning_net_opt = torch.optim.Adam(
         transformation_learning_net.parameters(), lr=config.transformation_learning_net_lr)
-    target_deformator_opt = torch.optim.Adam(target_deformator.parameters(), lr=config.deformator_lr)
+    target_deformator_opt = torch.optim.Adam(target_deformator.parameters(), lr=config.target_deformator_lr)
     return source_generator, source_deformator, target_generator, target_deformator, target_deformator_opt,\
            transformation_learning_net, transformation_learning_net_opt

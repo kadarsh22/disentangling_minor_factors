@@ -24,7 +24,7 @@ def run_training_wrapper(config, logger, perf_logger):
     models = get_model(config)
     model_trainer = Trainer(config)
     saver = Saver(config)
-    evaluator = Evaluator(config)
+    # evaluator = Evaluator(config)
     visualiser = Visualiser(config)
 
     source_generator, source_deformator, target_generator, target_deformator, target_deformator_opt, transformation_learning_net, \
@@ -37,23 +37,24 @@ def run_training_wrapper(config, logger, perf_logger):
     transformation_learning_net = model_trainer.train_transformation_learning_net(source_generator, source_deformator,
                                                                                   transformation_learning_net,
                                                                                   transformation_learning_net_opt)
-    visualiser.generate_latent_traversal(source_generator, source_deformator, '0000')
+    visualiser.generate_latent_traversal_stylegan(source_generator, source_deformator, '0000')
     logit_loss_list = []
     shift_loss_list = []
 
-    for iteration in range(config.num_iterations):
+    for iteration in range(config.num_deformator_iterations):
         target_deformator, target_deformator_opt, logit_loss, shift_loss = \
-            model_trainer.train_ours(target_generator, target_deformator, transformation_learning_net)
+            model_trainer.train_ours(target_generator, target_deformator, target_deformator_opt,
+                                     transformation_learning_net)
         logit_loss_list.append(logit_loss.item())
         shift_loss_list.append(shift_loss.item())
 
         if iteration % config.logging_freq == 0 and iteration != 0:
             logit_loss_avg = sum(logit_loss_list) / len(logit_loss_list)
             shift_loss_avg = sum(shift_loss_list) / len(shift_loss_list)
-            logger.info("step : %d / %d freezed_deformator_logit_loss : %.4f freezed_deformator_shift_loss  %.4f " % (
-                iteration, config.num_iterations, logit_loss_avg,shift_loss_avg))
-            wandb.log({'iteration': iteration + 1, 'freezed_deformator_logit_loss': logit_loss_avg,
-                       'freezed_deformator_shift_loss' : shift_loss_avg })
+            logger.info("step : %d / %d frozen_deformator_logit_loss : %.4f frozen_deformator_shift_loss  %.4f " % (
+                iteration, config.num_iterations, logit_loss_avg, shift_loss_avg))
+            wandb.log({'num_deformator_iterations': iteration + 1, 'frozen_deformator_logit_loss': logit_loss_avg,
+                       'frozen_deformator_shift_loss': shift_loss_avg})
             logit_loss_list = []
             shift_loss_list = []
 
@@ -65,11 +66,5 @@ def run_training_wrapper(config, logger, perf_logger):
 
         if iteration % config.visualisation_freq == 0:
             perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
-            visualiser.generate_latent_traversal(target_generator, target_deformator, iteration)
+            visualiser.generate_latent_traversal_pggan(target_generator, target_deformator, iteration)
             perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))
-
-        # if iteration % config.evaluation_freq == 0 and iteration != 0:
-        #     perf_logger.start_monitoring("Evaluating model for iteration :" + str(iteration))
-        #     evaluator.evaluate_directions(generator, deformator.ortho_mat, iteration,
-        #                                   resume_dir=config.resume_direction)
-        #     perf_logger.stop_monitoring("Evaluating model for iteration :" + str(iteration))
