@@ -35,7 +35,7 @@ class Visualiser(object):
 
     def generate_latent_traversal_pggan(self, generator, deformator, iteration):
         min_index = 0
-        directions = deformator.ortho_mat
+        directions = deformator.ortho_mat.T
         temp_path = os.path.join(self.config.result_path, 'temp')
         os.makedirs(temp_path, exist_ok=True)
         z = torch.randn(self.config.num_samples_lt, generator.z_space_dim).to(self.config.device)
@@ -53,7 +53,7 @@ class Visualiser(object):
             with torch.no_grad():
                 cf_images = torch.stack([F.avg_pool2d(generator(shifted_z[idx].view(-1, 512)), 16, 16) for idx in
                                          range(shifted_z.shape[0])]).view(-1, 3, 64, 64)
-            grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow=3, scale_each=True, normalize=True)
+            grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow=self.config.shifts_count, scale_each=True, normalize=True)
             lt_table.add_data(wandb.Image(grid), str(dir_idx))
             plt.imsave(os.path.join(temp_path, str(min_index) + '.png'), grid.permute(1, 2, 0).cpu().numpy())
             min_index = min_index + 1
@@ -79,7 +79,7 @@ class Visualiser(object):
             with torch.no_grad():
                 cf_images = torch.stack([F.avg_pool2d(generator.synthesis(shifted_w[idx]), 4, 4) for idx in
                                          range(len(shifted_w))]).view(-1, 3, 64, 64)
-            grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow=3, scale_each=True, normalize=True)
+            grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow=self.config.shifts_count, scale_each=True, normalize=True)
             lt_table.add_data(wandb.Image(grid), str(dir_idx))
             plt.imsave(os.path.join(temp_path, str(min_index) + 'sg.png'), grid.permute(1, 2, 0).cpu().numpy())
             min_index = min_index + 1

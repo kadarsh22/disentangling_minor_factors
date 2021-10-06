@@ -79,8 +79,7 @@ def load_deformator(config, model_name):
     if model_name == 'stylegan_cat256':
         directions_T = torch.load(os.path.join(DEFORMATOR_CHECKPOINT_DIR, model_name, model_name + '.pkl'))['deformator']['ortho_mat'].cpu()
     else:
-        _, directions, _ = torch.load(os.path.join(DEFORMATOR_CHECKPOINT_DIR, model_name, model_name + '.pkl'))
-        directions_T = directions.T  # Sefa returns eigenvectors as rows, so transpose required
+        directions_T = torch.load('pretrained_models/deformators/ClosedForm/pggan_celebahq1024/18000_model.pkl')['deformator']['ortho_mat'].cpu()
     if deformator_type == 'linear':
         deformator = CfLinear(config.latent_dim, config.num_directions)
         deformator.linear.weight.data = torch.FloatTensor(directions_T)

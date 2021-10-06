@@ -32,7 +32,7 @@ def run_training_wrapper(config, logger, perf_logger):
     source_generator.eval()
     target_generator.eval()
     source_deformator.eval()
-    target_deformator.train()
+    target_deformator.to(config.device).train()
     # saver.load_model((deformator,deformator_opt))
     transformation_learning_net = model_trainer.train_transformation_learning_net(source_generator, source_deformator,
                                                                                   transformation_learning_net,
@@ -40,7 +40,7 @@ def run_training_wrapper(config, logger, perf_logger):
 
     logit_loss_list = []
     shift_loss_list = []
-    visualiser.generate_latent_traversal_pggan(target_generator, target_deformator, 'reference')
+    visualiser.generate_latent_traversal_pggan(source_generator, source_deformator, 'reference')
 
     for iteration in range(config.num_deformator_iterations):
         if iteration % config.saving_freq == 0:
@@ -67,5 +67,5 @@ def run_training_wrapper(config, logger, perf_logger):
 
         if iteration % config.visualisation_freq == 0:
             perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
-            visualiser.generate_latent_traversal_stylegan(source_generator, source_deformator, iteration)
+            visualiser.generate_latent_traversal_stylegan(target_generator, target_deformator, iteration)
             perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))

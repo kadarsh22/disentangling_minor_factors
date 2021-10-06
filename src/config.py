@@ -12,16 +12,19 @@ def get_config(args):
     config = wandb.config
     config.gan_type = 'StyleGAN'  # choices=['pggan', 'StyleGAN2','SNGAN','StyleGAN']
     config.dataset = 'LSUN-cats'  # choices=['AnimeFaceS',CelebAHQ' ,'LSUN-cars', 'LSUN-cats']
-    config.source_model_name = 'pggan_celebahq1024'  # choices = ['pggan_celebahq1024',stylegan_animeface512, # stylegan_car512,stylegan_cat256]
+    config.source_model_name = 'pggan_celebahq1024'  # choices = ['pggan_celebahq1024',stylegan_animeface512,
+    # stylegan_car512,stylegan_cat256]
     config.target_model_name = 'stylegan_cat256'
 
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
     config.num_deformator_iterations = 1  # todo number of steps for training target_deformator
     config.batch_size = 1  # todo
-    config.num_transformer_steps = 1  #todo number of steps for training transformation learning net
+    config.num_transformer_steps = 1  # todo number of steps for training transformation learning net
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
-    config.num_directions = 5
+    config.num_directions = 512
+    config.num_output_units = 5
+    config.selected_source_dirs = [1, 2, 5, 11, 23]
     config.latent_dim = 512
     config.transformation_learning_net_lr = 0.0001
     config.source_epsilon = 6
@@ -36,16 +39,16 @@ def get_config(args):
 
     config.shifts_r_source = 6
     config.shifts_r_target = 2
-    config.shifts_count = 3
-    config.num_samples_lt = 10
+    config.shifts_count = 5
+    config.num_samples_lt = 5
 
     config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
     config.eval_eps = 10  # Magnitude of perturbation for re-scoring analysis
-    config.eval_directions = 5
+    config.eval_directions = config.num_output_units
     config.eval_batchsize = 2
     config.resume_direction = None
 
-    config.saving_freq = 20 ##todo
+    config.saving_freq = 20  ##todo
     config.logging_freq = 20
     config.evaluation_freq = 20
     config.visualisation_freq = 20
