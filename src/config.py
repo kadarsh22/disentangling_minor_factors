@@ -12,8 +12,8 @@ def get_config(args):
     config = wandb.config
     config.gan_type = 'StyleGAN'  # choices=['pggan', 'StyleGAN2','SNGAN','StyleGAN']
     config.dataset = 'LSUN-cats'  # choices=['AnimeFaceS',CelebAHQ' ,'LSUN-cars', 'LSUN-cats']
-    config.source_model_name = 'stylegan_cat256'  # choices = ['pggan_celebahq1024',stylegan_animeface512, # stylegan_car512,stylegan_cat256]
-    config.target_model_name = 'pggan_celebahq1024'
+    config.source_model_name = 'pggan_celebahq1024'  # choices = ['pggan_celebahq1024',stylegan_animeface512, # stylegan_car512,stylegan_cat256]
+    config.target_model_name = 'stylegan_cat256'
 
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
@@ -24,27 +24,28 @@ def get_config(args):
     config.num_directions = 5
     config.latent_dim = 512
     config.transformation_learning_net_lr = 0.0001
-    config.epsilon = 2
+    config.source_epsilon = 6
+    config.target_epsilon = 2
     config.shift_distribution = 'normal'
     config.min_shift = 0.5
     config.label_weight = 1
-    config.shift_weight = 0.25
+    config.shift_weight = 0
     config.target_deformator_lr = 0.0001
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
 
-    config.shifts_r_source = 3
-    config.shifts_r_target = 3
+    config.shifts_r_source = 6
+    config.shifts_r_target = 2
     config.shifts_count = 3
     config.num_samples_lt = 10
 
     config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
     config.eval_eps = 10  # Magnitude of perturbation for re-scoring analysis
-    config.eval_directions = 10
+    config.eval_directions = 5
     config.eval_batchsize = 2
     config.resume_direction = None
 
-    config.saving_freq = 20
+    config.saving_freq = 20 ##todo
     config.logging_freq = 20
     config.evaluation_freq = 20
     config.visualisation_freq = 20

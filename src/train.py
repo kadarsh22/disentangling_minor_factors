@@ -34,11 +34,12 @@ class Trainer(object):
 
         target_deformator_opt.zero_grad()
         z = torch.randn(self.config.batch_size, self.config.latent_dim).to(self.config.device)
-        target_indices, shifts, z_shift = self.make_shifts(self.config.latent_dim)
-        with torch.no_grad():
-            ref_images = target_generator(z)
-            z_shift = target_deformator(z_shift)
-        peturbed_images = target_generator(z, shift= z_shift)
+        target_indices, shifts, w_shift = self.make_shifts(self.config.latent_dim)
+        w = target_generator.mapping(z)['w']
+        codes = target_generator.truncation(w, trunc_psi=0.7, trunc_layers=8)
+        ref_images = target_generator.synthesis(codes)
+        w_shifted = target_deformator(w_shift).unsqueeze(1).repeat(1, 14, 1)
+        peturbed_images = target_generator.synthesis(codes + w_shifted)
         logits, shift_prediction = transformation_learning_net(ref_images,  peturbed_images)
         logit_loss = self.config.label_weight * self.cross_entropy(logits, target_indices)
         shift_loss = self.config.shift_weight * torch.mean(torch.abs(shift_prediction - shifts))
@@ -59,12 +60,10 @@ class Trainer(object):
         for step in range(self.config.num_transformer_steps):
             transformation_learning_net_opt.zero_grad()
             z = torch.randn(self.config.batch_size, self.config.latent_dim).to(self.config.device)
-            target_indices, shifts, w_shift = self.make_shifts(self.config.latent_dim)
-            w = source_generator.mapping(z)['w']
-            codes = source_generator.truncation(w, trunc_psi=0.7, trunc_layers=8)
-            ref_images = source_generator.synthesis(codes)
-            w_shifted = source_deformator(w_shift).unsqueeze(1).repeat(1,14,1)
-            peturbed_images = source_generator.synthesis(codes + w_shifted)
+            z = source_generator.layer0.pixel_norm(z)
+            target_indices, shifts, z_shift = self.make_shifts(self.config.latent_dim)
+            ref_images = source_generator(z)
+            peturbed_images = source_generator(z+z_shift)
             logits, shift_prediction = transformation_learning_net(ref_images,  peturbed_images)
             logit_loss = self.config.label_weight * self.cross_entropy(logits, target_indices)
             shift_loss = self.config.shift_weight * torch.mean(torch.abs(shift_prediction - shifts))
@@ -78,14 +77,14 @@ class Trainer(object):
                 training_shift_loss_avg = sum(training_shift_loss) / len(training_shift_loss)
                 training_logit_loss_avg = sum(training_logit_loss) / len(training_logit_loss)
                 percent = self.validate_transformation_learning_net(source_generator, source_deformator, transformation_learning_net)
-                logging.info("step : %d / %d shift loss : %.3f logit loss  %.3f " % (
+                logging.info("step : %d / %d frozen_shift loss : %.3f frozen_logit loss  %.3f " % (
                     step, self.config.num_transformer_steps, training_shift_loss_avg, training_logit_loss_avg))
-                wandb.log({'num_transformer_steps': step + 1, 'accuracy': percent, 'shift_loss': training_shift_loss_avg,
-                           'logit_loss': training_logit_loss_avg})
+                wandb.log({'num_transformer_steps': step + 1, 'accuracy': percent, 'frozen_shift_loss': training_shift_loss_avg,
+                           'frozen_logit_loss': training_logit_loss_avg})
                 training_logit_loss = []
                 training_shift_loss = []
 
-        return transformation_learning_net
+        return transformation_learning_net.eval()
 
     def validate_transformation_learning_net(self, source_generator, source_deformator, transformation_learning_net):
 
@@ -93,12 +92,10 @@ class Trainer(object):
         percents = torch.empty([n_steps])
         for step in range(n_steps):
             z = torch.randn(self.config.batch_size, self.config.latent_dim).to(self.config.device)
-            target_indices, shifts, w_shift = self.make_shifts(self.config.latent_dim)
-            w = source_generator.mapping(z)['w']
-            codes = source_generator.truncation(w, trunc_psi=0.7, trunc_layers=8)
-            w_shifted = source_deformator(w_shift).unsqueeze(1).repeat(1, 14, 1)
-            imgs = source_generator.synthesis(codes)
-            imgs_shifted = source_generator.synthesis(codes + w_shifted)
+            target_indices, shifts, z_shift = self.make_shifts(self.config.latent_dim)
+            z = source_generator.layer0.pixel_norm(z)
+            imgs = source_generator(z)
+            imgs_shifted = source_generator.synthesis(z + z_shift)
 
             logits, _ = transformation_learning_net(imgs, imgs_shifted)
             percents[step] = (torch.argmax(logits, dim=1) == target_indices).to(torch.float32).mean()
@@ -124,6 +121,6 @@ class Trainer(object):
 
         z_shift = torch.zeros([self.config.batch_size] + latent_dim, device='cuda')
         for i, (index, val) in enumerate(zip(target_indices, shifts)):
-            z_shift[i][index] += val
+            z_shift[i][index] += abs(val)
 
         return target_indices, shifts, z_shift

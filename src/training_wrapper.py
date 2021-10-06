@@ -37,11 +37,18 @@ def run_training_wrapper(config, logger, perf_logger):
     transformation_learning_net = model_trainer.train_transformation_learning_net(source_generator, source_deformator,
                                                                                   transformation_learning_net,
                                                                                   transformation_learning_net_opt)
-    visualiser.generate_latent_traversal_stylegan(source_generator, source_deformator, '0000')
+
     logit_loss_list = []
     shift_loss_list = []
+    visualiser.generate_latent_traversal_pggan(target_generator, target_deformator, 'reference')
 
     for iteration in range(config.num_deformator_iterations):
+        if iteration % config.saving_freq == 0:
+            params = (target_deformator, target_deformator_opt, transformation_learning_net)
+            perf_logger.start_monitoring("Saving Model for iteration :" + str(iteration))
+            saver.save_model(params, iteration)
+            perf_logger.stop_monitoring("Saving Model for iteration :" + str(iteration))
+
         target_deformator, target_deformator_opt, logit_loss, shift_loss = \
             model_trainer.train_ours(target_generator, target_deformator, target_deformator_opt,
                                      transformation_learning_net)
@@ -51,20 +58,14 @@ def run_training_wrapper(config, logger, perf_logger):
         if iteration % config.logging_freq == 0 and iteration != 0:
             logit_loss_avg = sum(logit_loss_list) / len(logit_loss_list)
             shift_loss_avg = sum(shift_loss_list) / len(shift_loss_list)
-            logger.info("step : %d / %d frozen_deformator_logit_loss : %.4f frozen_deformator_shift_loss  %.4f " % (
+            logger.info("step : %d / %d deformator_logit_loss : %.4f deformator_shift_loss  %.4f " % (
                 iteration, config.num_iterations, logit_loss_avg, shift_loss_avg))
-            wandb.log({'num_deformator_iterations': iteration + 1, 'frozen_deformator_logit_loss': logit_loss_avg,
-                       'frozen_deformator_shift_loss': shift_loss_avg})
+            wandb.log({'num_deformator_iterations': iteration + 1, 'deformator_logit_loss': logit_loss_avg,
+                       'deformator_shift_loss': shift_loss_avg})
             logit_loss_list = []
             shift_loss_list = []
 
-        if iteration % config.saving_freq == 0 and iteration != 0:
-            params = (target_deformator, target_deformator_opt, transformation_learning_net)
-            perf_logger.start_monitoring("Saving Model for iteration :" + str(iteration))
-            saver.save_model(params, iteration)
-            perf_logger.stop_monitoring("Saving Model for iteration :" + str(iteration))
-
         if iteration % config.visualisation_freq == 0:
             perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
-            visualiser.generate_latent_traversal_pggan(target_generator, target_deformator, iteration)
+            visualiser.generate_latent_traversal_stylegan(source_generator, source_deformator, iteration)
             perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))
