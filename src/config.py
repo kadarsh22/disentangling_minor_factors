@@ -24,7 +24,7 @@ def get_config(args):
     config.num_directions = 5
     config.latent_dim = 512
     config.transformation_learning_net_lr = 0.0001
-    config.epsilon = 6
+    config.epsilon = 2
     config.shift_distribution = 'normal'
     config.min_shift = 0.5
     config.label_weight = 1
@@ -33,13 +33,14 @@ def get_config(args):
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
 
-    config.shifts_r = 5
-    config.shifts_count = 2
-    config.num_samples_lt = 2
+    config.shifts_r_source = 3
+    config.shifts_r_target = 3
+    config.shifts_count = 3
+    config.num_samples_lt = 10
 
     config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
     config.eval_eps = 10  # Magnitude of perturbation for re-scoring analysis
-    config.eval_directions = 2 ##todo
+    config.eval_directions = 10
     config.eval_batchsize = 2
     config.resume_direction = None
 
