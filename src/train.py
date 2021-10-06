@@ -33,8 +33,8 @@ class Trainer(object):
     def train_ours(self, target_generator, target_deformator, target_deformator_opt, transformation_learning_net):
 
         target_deformator_opt.zero_grad()
-        z = torch.randn(self.config.batch_size, self.config.latent_dim).to(self.config.device)
-        target_indices, shifts, w_shift, cross_entropy_indices = self.make_shifts(self.config.latent_dim, self.config.target_epsilon)
+        z = torch.randn(self.config.target_batch_size, self.config.latent_dim).to(self.config.device)
+        target_indices, shifts, w_shift, cross_entropy_indices = self.make_shifts(self.config.latent_dim, self.config.target_epsilon, self.config.target_batch_size)
         w = target_generator.mapping(z)['w']
         codes = target_generator.truncation(w, trunc_psi=0.7, trunc_layers=8)
         ref_images = target_generator.synthesis(codes)
@@ -59,9 +59,9 @@ class Trainer(object):
 
         for step in range(self.config.num_transformer_steps):
             transformation_learning_net_opt.zero_grad()
-            z = torch.randn(self.config.batch_size, self.config.latent_dim).to(self.config.device)
+            z = torch.randn(self.config.source_batch_size, self.config.latent_dim).to(self.config.device)
             z = source_generator.layer0.pixel_norm(z)
-            target_indices, shifts, z_shift, cross_entropy_indices = self.make_shifts(self.config.latent_dim, self.config.source_epsilon)
+            target_indices, shifts, z_shift, cross_entropy_indices = self.make_shifts(self.config.latent_dim, self.config.source_epsilon, self.config.source_batch_size)
             ref_images = source_generator(z)
             z_shift = source_deformator(z_shift)
             peturbed_images = source_generator(z+z_shift)
@@ -93,8 +93,8 @@ class Trainer(object):
         percents = torch.empty([n_steps])
         with torch.no_grad():
             for step in range(n_steps):
-                z = torch.randn(self.config.batch_size, self.config.latent_dim).to(self.config.device)
-                target_indices, shifts, z_shift, cross_entropy_indices = self.make_shifts(self.config.latent_dim, self.config.source_epsilon)
+                z = torch.randn(self.config.source_batch_size, self.config.latent_dim).to(self.config.device)
+                target_indices, shifts, z_shift, cross_entropy_indices = self.make_shifts(self.config.latent_dim, self.config.source_epsilon, self.config.source_batch_size)
                 z = source_generator.layer0.pixel_norm(z)
                 imgs = source_generator(z)
                 imgs_shifted = source_generator(z + z_shift)
@@ -103,8 +103,8 @@ class Trainer(object):
 
         return percents.mean()
 
-    def make_shifts(self, latent_dim, epsilon):
-        target_indices = torch.LongTensor(np.random.choice(self.config.selected_source_dirs,self.config.batch_size)).to(self.config.device)
+    def make_shifts(self, latent_dim, epsilon, batch_size):
+        target_indices = torch.LongTensor(np.random.choice(self.config.selected_source_dirs, batch_size)).to(self.config.device)
         if self.config.shift_distribution == 'normal':
             shifts = torch.randn(target_indices.shape).to(self.config.device)
         elif self.config.shift_distribution == 'uniform':
@@ -120,7 +120,7 @@ class Trainer(object):
         except Exception:
             latent_dim = [latent_dim]
 
-        z_shift = torch.zeros([self.config.batch_size] + latent_dim, device='cuda')
+        z_shift = torch.zeros([batch_size] + latent_dim, device='cuda')
         for i, (index, val) in enumerate(zip(target_indices, shifts)):
             z_shift[i][index] += abs(val)
         cross_entropy_indices = torch.LongTensor([self.config.selected_source_dirs.index(i) for i in target_indices.tolist()])

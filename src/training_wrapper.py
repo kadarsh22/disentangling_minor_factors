@@ -59,7 +59,7 @@ def run_training_wrapper(config, logger, perf_logger):
             logit_loss_avg = sum(logit_loss_list) / len(logit_loss_list)
             shift_loss_avg = sum(shift_loss_list) / len(shift_loss_list)
             logger.info("step : %d / %d deformator_logit_loss : %.4f deformator_shift_loss  %.4f " % (
-                iteration, config.num_iterations, logit_loss_avg, shift_loss_avg))
+                iteration, config.num_deformator_iterations, logit_loss_avg, shift_loss_avg))
             wandb.log({'num_deformator_iterations': iteration + 1, 'deformator_logit_loss': logit_loss_avg,
                        'deformator_shift_loss': shift_loss_avg})
             logit_loss_list = []
