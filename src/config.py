@@ -49,10 +49,10 @@ def get_config(args):
     config.eval_batchsize = 2
     config.resume_direction = None
 
-    config.saving_freq = 20  ##todo
-    config.logging_freq = 20
-    config.evaluation_freq = 20
-    config.visualisation_freq = 20
+    config.saving_freq = 2000  ##todo
+    config.logging_freq = 100
+    config.evaluation_freq = 100
+    config.visualisation_freq = 500
 
     config.classifier_path = 'pretrained_models'
     config.simple_cls_path = 'pretrained_models/classifiers/'

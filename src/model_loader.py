@@ -6,6 +6,7 @@ from models.latentdiscovery.utils import load_deformator as load_ld_deformator
 from models.latent_shift_predictor import LatentShiftPredictor
 from models.closedform.closedform_directions import CfOrtho
 
+
 def get_model(config):
     if config.initialisation == 'closed_form':
         source_generator = load_cf_generator(config.source_model_name, config.device)
@@ -21,5 +22,5 @@ def get_model(config):
     transformation_learning_net_opt = torch.optim.Adam(
         transformation_learning_net.parameters(), lr=config.transformation_learning_net_lr)
     target_deformator_opt = torch.optim.Adam(target_deformator.parameters(), lr=config.target_deformator_lr)
-    return source_generator, source_deformator, target_generator, target_deformator, target_deformator_opt,\
+    return source_generator, source_deformator, target_generator, target_deformator, target_deformator_opt, \
            transformation_learning_net, transformation_learning_net_opt
