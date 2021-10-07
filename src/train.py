@@ -88,6 +88,7 @@ class Trainer(object):
                 training_shift_loss = []
 
             if step % 5000 == 0:
+                os.makedirs(self.config.result_path,exist_ok=True)
                 torch.save(transformation_learning_net,os.path.join(self.config.result_path, 'transformation_learning_net_'+str(step)+'.pkl'))
 
         return transformation_learning_net.eval()
