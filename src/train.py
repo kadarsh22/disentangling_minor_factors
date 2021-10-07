@@ -33,6 +33,8 @@ class Trainer(object):
     def train_ours(self, target_generator, target_deformator, target_deformator_opt, transformation_learning_net):
 
         target_deformator_opt.zero_grad()
+        transformation_learning_net.zero_grad()
+        target_generator.zero_grad()
         z = torch.randn(self.config.target_batch_size, self.config.latent_dim).to(self.config.device)
         target_indices, shifts, w_shift, cross_entropy_indices = self.make_shifts(self.config.latent_dim, self.config.target_epsilon, self.config.target_batch_size)
         w = target_generator.mapping(z)['w']
@@ -74,7 +76,7 @@ class Trainer(object):
             loss.backward()
             transformation_learning_net_opt.step()
 
-            if step % 50 == 0:
+            if step % 500 == 0:
                 training_shift_loss_avg = sum(training_shift_loss) / len(training_shift_loss)
                 training_logit_loss_avg = sum(training_logit_loss) / len(training_logit_loss)
                 percent = self.validate_transformation_learning_net(source_generator, source_deformator, transformation_learning_net)
@@ -84,6 +86,9 @@ class Trainer(object):
                            'frozen_logit_loss': training_logit_loss_avg})
                 training_logit_loss = []
                 training_shift_loss = []
+
+            if step % 5000 == 0:
+                torch.save(transformation_learning_net,os.path.join(self.config.result_path, 'transformation_learning_net_'+str(step)+'.pkl'))
 
         return transformation_learning_net.eval()
 
@@ -97,6 +102,7 @@ class Trainer(object):
                 target_indices, shifts, z_shift, cross_entropy_indices = self.make_shifts(self.config.latent_dim, self.config.source_epsilon, self.config.source_batch_size)
                 z = source_generator.layer0.pixel_norm(z)
                 imgs = source_generator(z)
+                z_shift = source_deformator(z_shift)
                 imgs_shifted = source_generator(z + z_shift)
                 logits, _ = transformation_learning_net(imgs, imgs_shifted)
                 percents[step] = (torch.argmax(logits, dim=1) == cross_entropy_indices).to(torch.float32).mean()

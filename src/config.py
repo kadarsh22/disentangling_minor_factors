@@ -18,10 +18,10 @@ def get_config(args):
 
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
-    config.num_deformator_iterations = 50000  # todo number of steps for training target_deformator
+    config.num_deformator_iterations = 50001  # todo number of steps for training target_deformator
     config.source_batch_size = 4  # todo
-    config.target_batch_size = 32
-    config.num_transformer_steps = 10000  # todo number of steps for training transformation learning net
+    config.target_batch_size = 16
+    config.num_transformer_steps = 20001  # todo number of steps for training transformation learning net
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
     config.num_directions = 512
     config.num_output_units = 5
