@@ -6,9 +6,9 @@ def save_hook(module, input, output):
     setattr(module, 'output', output)
 
 
-class ResNetEpsPredictor(nn.Module):
+class Classifier(nn.Module):
     def __init__(self, downsample=None, channels=3, num_dirs=10):
-        super(ResNetEpsPredictor, self).__init__()
+        super(Classifier, self).__init__()
         self.features_extractor = resnet18(pretrained=False)
         self.features_extractor.conv1 = nn.Conv2d(
             channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)

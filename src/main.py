@@ -20,7 +20,7 @@ def main():
     if config.train:
         for seed in config.random_seeds:
             Trainer.set_seed(seed)
-            run_training_wrapper(config, logger, perf_logger)
+            run_training_wrapper(config, seed, logger, perf_logger)
     else:
         Evaluator.set_seed(config.random_seed)
         run_evaluation_wrapper(config, perf_logger)

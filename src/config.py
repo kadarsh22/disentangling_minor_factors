@@ -26,6 +26,7 @@ def get_config(args):
     config.epsilon = 10
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
+    config.load_pretrained_z = True
 
     config.shifts_r = 5
     config.shifts_count = 2

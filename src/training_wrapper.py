@@ -7,11 +7,12 @@ from evaluation import Evaluator
 from visualisation import Visualiser
 
 
-def run_training_wrapper(config, logger, perf_logger):
+def run_training_wrapper(config, seed, logger, perf_logger):
     directories = list_dir_recursively_with_ignore('.',
                                                    ignores=['checkpoint.pt', '__pycache__', 'wandb', 'venv', '.idea',
                                                             'data', 'pretrained_models', 'data',
-                                                            'results', '.git', '.gitignore', 'artifacts','pretrained_models.tar.xz','pretrained_models'])
+                                                            'results', '.git', '.gitignore', 'artifacts',
+                                                            'pretrained_models.tar.xz', 'pretrained_models'])
     filtered_dirs = []
     for file in directories:
         x, y = file
@@ -26,39 +27,44 @@ def run_training_wrapper(config, logger, perf_logger):
     evaluator = Evaluator(config)
     visualiser = Visualiser(config)
 
-    generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt = models
+    generator, deformator, deformator_opt, classifier, classifier_opt = models
     deformator.train()
     generator.generator.eval()
-    eps_predictor_loss_list = []
-    deformator_ranking_loss_list = []
+    classifier_loss_list = []
+    deformator_loss_list = []
+    supervision_images = Trainer.get_initialisations(generator, seed)
     # saver.load_model((deformator,deformator_opt))
     for iteration in range(config.num_iterations):
-        deformator, deformator_opt, eps_predictor, eps_predictor_opt, eps_predictor_loss, deformator_ranking_loss = \
-            model_trainer.train_ours(generator, deformator, deformator_opt, eps_predictor, eps_predictor_opt)
-        eps_predictor_loss_list.append(eps_predictor_loss)
-        deformator_ranking_loss_list.append(deformator_ranking_loss)
+        deformator, deformator_opt, classifier, classifier_opt, deformator_loss, classifier_loss = \
+            model_trainer.train_ours(generator, supervision_images, deformator, deformator_opt, classifier,
+                                     classifier_opt)
+        classifier_loss_list.append(classifier_loss.item())
+        deformator_loss_list.append(deformator_loss.item())
 
         if iteration % config.logging_freq == 0 and iteration != 0:
-            eps_predictor_loss_avg = sum(eps_predictor_loss_list) / len(eps_predictor_loss_list)
-            deformator_ranking_loss_avg = sum(deformator_ranking_loss_list) / len(deformator_ranking_loss_list)
+            classifier_loss_avg = sum(classifier_loss_list) / len(classifier_loss_list)
+            deformator_loss_avg = sum(deformator_loss_list) / len(deformator_loss_list)
             logger.info("step : %d / %d eps predictor loss : %.4f Deformator_loss  %.4f " % (
-                iteration, config.num_iterations, eps_predictor_loss_avg, deformator_ranking_loss_avg))
-            wandb.log({'iteration': iteration + 1, 'loss': deformator_ranking_loss_avg})
+                iteration, config.num_iterations, classifier_loss_avg, deformator_loss_avg))
+            wandb.log({'iteration': iteration + 1, 'deformator_loss': deformator_loss_avg,
+                       'classifier_loss': classifier_loss_avg})
 
         if iteration % config.saving_freq == 0 and iteration != 0:
-            params = (deformator, deformator_opt, eps_predictor, eps_predictor_opt)
+            params = (deformator, deformator_opt, classifier, classifier_opt)
             perf_logger.start_monitoring("Saving Model for iteration :" + str(iteration))
             saver.save_model(params, iteration)
             perf_logger.stop_monitoring("Saving Model for iteration :" + str(iteration))
 
-        if iteration % config.evaluation_freq == 0 and iteration != 0:
-            perf_logger.start_monitoring("Evaluating model for iteration :" + str(iteration))
-            evaluator.evaluate_directions(generator, deformator.ortho_mat, iteration,
-                                          resume_dir=config.resume_direction)
-            perf_logger.stop_monitoring("Evaluating model for iteration :" + str(iteration))
+        if iteration % config.visualisation_freq == 0:
+            perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
+            visualiser.visualise_directions(generator, deformator, iteration)
+            visualiser.generate_latent_traversal(generator, deformator, iteration)
+            perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))
 
-        # if iteration % config.visualisation_freq == 0:
-        #     perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
-        #     visualiser.visualise_directions(generator, deformator, iteration)
-        #     visualiser.generate_latent_traversal(generator, deformator, iteration)
-        #     perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))
+
+        ## need  to be changed
+        # if iteration % config.evaluation_freq == 0 and iteration != 0:
+        #     perf_logger.start_monitoring("Evaluating model for iteration :" + str(iteration))
+        #     evaluator.evaluate_directions(generator, deformator.ortho_mat, iteration,
+        #                                   resume_dir=config.resume_direction)
+        #     perf_logger.stop_monitoring("Evaluating model for iteration :" + str(iteration))

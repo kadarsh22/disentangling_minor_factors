@@ -38,24 +38,23 @@ class Visualiser(object):
         directions = deformator.ortho_mat
         temp_path = os.path.join(self.config.result_path, 'temp')
         os.makedirs(temp_path, exist_ok=True)
-        z = torch.randn(self.config.num_samples_lt, generator.z_space_dim).to(self.config.device)
-        z = generator.layer0.pixel_norm(z)
+        z = generator.sample_zs(self.config.batch_size, self.config.random_seed)
         latent_traversal_artifact = wandb.Artifact(str(wandb.run.name) + '_latent_traversals', type="Latent Traversals")
         lt_table = wandb.Table(columns=['image_grid', 'direction_idx'])
 
         for dir_idx in range(self.config.eval_directions):
-            shifted_z = []
+            shifted_w = []
             for idx, z_ in enumerate(z):
                 for i, shift in enumerate(
                         np.linspace(-self.config.shifts_r, self.config.shifts_r, self.config.shifts_count)):
-                    shifted_z.append(z_ + directions[dir_idx: dir_idx + 1] * shift)
-            shifted_z = torch.stack(shifted_z).squeeze(dim=1)
+                    w = generator.generator.gen.style(z_)
+                    shifted_w.append(w + directions[dir_idx: dir_idx + 1] * shift)
+            shifted_w = torch.stack(shifted_w).squeeze(dim=1)
             with torch.no_grad():
-                cf_images = torch.stack([F.avg_pool2d(generator(shifted_z[idx].view(-1, 512)), 16, 16) for idx in
-                                         range(shifted_z.shape[0])]).view(-1, 3, 64, 64)
+                cf_images = torch.stack([F.avg_pool2d(generator.generator(shifted_w[idx].view(-1, 512)), 16, 16) for idx in
+                                         range(shifted_w.shape[0])]).view(-1, 3, 64, 64)
             grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow=3, scale_each=True, normalize=True)
             lt_table.add_data(wandb.Image(grid), str(dir_idx))
-            plt.grid(b=None)
             plt.imsave(os.path.join(temp_path, str(min_index) + '.png'), grid.permute(1, 2, 0).cpu().numpy())
             min_index = min_index + 1
         latent_traversal_artifact.add(lt_table, "lt")
