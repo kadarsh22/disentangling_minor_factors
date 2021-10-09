@@ -58,7 +58,7 @@ class Trainer(object):
 
     def get_initialisations(self, generator, seed):
 
-        z_full = generator.sample_zs(5000, seed)
+        z_full = generator.sample_zs(self.config.supervision_pool_size, seed)
         os.makedirs(os.path.join(self.config.result_path, "generated_images"), exist_ok=True)
         torch.save(z_full, os.path.join(self.config.result_path, "generated_images", "z_generated.pth"))
         new_dataset = NoiseDataset(z_full)
@@ -69,7 +69,7 @@ class Trainer(object):
         extreme_ = wandb.Table(columns=['image_grid', 'direction_idx'])
 
         ordered_idx = {}
-        if not self.config.load_pretraine_z:
+        if not self.config.load_pretrained_z:
             for predictor_idx, classifier_name in enumerate(self.all_attr_list):
                 predictor = attribute_utils.ClassifierWrapper(classifier_name, ckpt_path=self.config.nvidia_cls_path,
                                                               device=self.config.device)

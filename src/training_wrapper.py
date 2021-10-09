@@ -32,7 +32,7 @@ def run_training_wrapper(config, seed, logger, perf_logger):
     generator.generator.eval()
     classifier_loss_list = []
     deformator_loss_list = []
-    supervision_images = Trainer.get_initialisations(generator, seed)
+    supervision_images = model_trainer.get_initialisations(generator, seed)
     # saver.load_model((deformator,deformator_opt))
     for iteration in range(config.num_iterations):
         deformator, deformator_opt, classifier, classifier_opt, deformator_loss, classifier_loss = \

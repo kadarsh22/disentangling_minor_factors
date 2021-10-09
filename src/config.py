@@ -17,7 +17,7 @@ def get_config(args):
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
     config.num_iterations = 1  # todo
-    config.batch_size = 4
+    config.batch_size = 8
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
     config.deformator_lr = 0.0001
     config.eps_predictor_lr = 0.0001
@@ -26,7 +26,8 @@ def get_config(args):
     config.epsilon = 10
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
-    config.load_pretrained_z = True
+    config.load_pretrained_z = False
+    config.supervision_pool_size = 5000
 
     config.shifts_r = 5
     config.shifts_count = 2
