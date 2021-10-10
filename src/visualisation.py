@@ -33,12 +33,12 @@ class Visualiser(object):
         images = images.transpose(0, 2, 3, 1)
         return images
 
-    def generate_latent_traversal(self, generator, deformator, iteration):
+    def generate_latent_traversal(self, generator, deformator, iteration ,seed):
         min_index = 0
         directions = deformator.ortho_mat
         temp_path = os.path.join(self.config.result_path, 'temp')
         os.makedirs(temp_path, exist_ok=True)
-        z = generator.sample_zs(self.config.batch_size, self.config.random_seed)
+        z = generator.sample_zs(self.config.batch_size, seed)
         latent_traversal_artifact = wandb.Artifact(str(wandb.run.name) + '_latent_traversals', type="Latent Traversals")
         lt_table = wandb.Table(columns=['image_grid', 'direction_idx'])
 

@@ -37,7 +37,7 @@ def run_training_wrapper(config, seed, logger, perf_logger):
     for iteration in range(config.num_iterations):
         deformator, deformator_opt, classifier, classifier_opt, deformator_loss, classifier_loss = \
             model_trainer.train_ours(generator, supervision_images, deformator, deformator_opt, classifier,
-                                     classifier_opt)
+                                     classifier_opt, seed)
         classifier_loss_list.append(classifier_loss.item())
         deformator_loss_list.append(deformator_loss.item())
 
@@ -56,15 +56,12 @@ def run_training_wrapper(config, seed, logger, perf_logger):
             perf_logger.stop_monitoring("Saving Model for iteration :" + str(iteration))
 
         if iteration % config.visualisation_freq == 0:
-            perf_logger.start_monitoring("Visualising model for iteration :" + str(iteration))
-            visualiser.visualise_directions(generator, deformator, iteration)
-            visualiser.generate_latent_traversal(generator, deformator, iteration)
-            perf_logger.stop_monitoring("Visualising model for iteration :" + str(iteration))
+            visualiser.generate_latent_traversal(generator, deformator, iteration, seed)
 
-
-        ## need  to be changed
-        # if iteration % config.evaluation_freq == 0 and iteration != 0:
-        #     perf_logger.start_monitoring("Evaluating model for iteration :" + str(iteration))
-        #     evaluator.evaluate_directions(generator, deformator.ortho_mat, iteration,
-        #                                   resume_dir=config.resume_direction)
-        #     perf_logger.stop_monitoring("Evaluating model for iteration :" + str(iteration))
+    visualiser.visualise_directions(generator, deformator, iteration, seed)
+    ## need  to be changed
+    # if iteration % config.evaluation_freq == 0 and iteration != 0:
+    #     perf_logger.start_monitoring("Evaluating model for iteration :" + str(iteration))
+    #     evaluator.evaluate_directions(generator, deformator.ortho_mat, iteration,
+    #                                   resume_dir=config.resume_direction)
+    #     perf_logger.stop_monitoring("Evaluating model for iteration :" + str(iteration))

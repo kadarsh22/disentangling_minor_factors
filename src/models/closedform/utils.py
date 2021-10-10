@@ -87,7 +87,7 @@ def load_deformator(config):
         deformator = CfLinear(config.latent_dim, config.num_directions)
         deformator.linear.weight.data = torch.FloatTensor(directions_T)
     elif deformator_type == 'ortho':
-        deformator = CfOrtho(config.latent_dim, config.num_directions)
-        deformator.ortho_mat.data = torch.FloatTensor(directions_T)
+        deformator = CfOrtho(config.latent_dim, config.latent_dim)
+        deformator.ortho_mat.data = torch.FloatTensor(deformator.ortho_mat.data[:, :config.num_directions])
     deformator.to(config.device)
     return deformator

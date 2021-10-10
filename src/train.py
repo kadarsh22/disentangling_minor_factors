@@ -9,6 +9,7 @@ from torchvision import transforms
 import torchvision
 import torch.nn.functional as F
 import wandb
+import matplotlib.pyplot as plt
 
 
 class Trainer(object):
@@ -17,7 +18,7 @@ class Trainer(object):
         super(Trainer, self).__init__()
         self.config = config
         self.all_attr_list = ['Bald', 'Bangs', 'Goatee', 'Mustache', 'Pale_Skin',
-                              'Wearing_Lipstick']
+                              'Wearing_Lipstick','Pose']
         self.classifier_loss = nn.BCEWithLogitsLoss()
 
     @staticmethod
@@ -30,27 +31,28 @@ class Trainer(object):
         random.seed(seed)
         os.environ['PYTHONHASHSEED'] = str(seed)
 
-    def train_ours(self, generator, supervision_images, deformator, deformator_opt, classifier, classifier_opt):
+    def train_ours(self, generator, supervision_images, deformator, deformator_opt, classifier, classifier_opt, seed):
 
         classifier_opt.zero_grad()
-        attribute_idx = torch.randint(0, len(self.all_attr_list), self.config.batch_size)
-        type_idx = torch.randint(0, 2, self.config.batch_size)
-        image_idx = attribute_idx + type_idx
-        one_shot_images = supervision_images[image_idx]
+        attribute_idx = torch.randint(0, len(self.all_attr_list), (self.config.batch_size, 1)).view(-1)
+        type_idx = torch.randint(0, 2, (self.config.batch_size, 1)).view(-1)
+        image_idx = attribute_idx*2 + type_idx
+        one_shot_images = supervision_images[image_idx.view(-1)]
         pred = classifier(one_shot_images)
-        pred_logits = torch.gather(pred, dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1))
-        classifier_loss = self.classifier_loss(pred_logits, type_idx)
+        pred_logits = torch.gather(pred.view(self.config.batch_size,-1), dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1).to(self.config.device)).view(-1)
+        classifier_loss = self.classifier_loss(pred_logits, type_idx.float().to(self.config.device))
         classifier_loss.backward()
         classifier_opt.step()
 
+        generator.zero_grad()
         deformator_opt.zero_grad()
-        z = generator.sample_zs(self.config.batch_size, self.config.random_seed)
-        target_indices, type_idx, w_shift = self.make_shifts()
+        z = generator.sample_zs(self.config.batch_size, seed)
+        target_indices, type_idx, w_shift = self.make_shifts(deformator.input_dim)
         w = generator.generator.gen.style(z)
         images = generator.generator(w + w_shift)
         pred = classifier(images)
-        pred_logits = torch.gather(pred, dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1))
-        deformator_loss = self.classifier_loss(pred_logits, type_idx)
+        pred_logits = torch.gather(pred, dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1).to(self.config.device))
+        deformator_loss = self.classifier_loss(pred_logits.view(-1), type_idx.float().to(self.config.device))
         deformator_loss.backward()
         deformator_opt.step()
 
@@ -102,19 +104,30 @@ class Trainer(object):
             initialisation_artifact.add(extreme_, "initialisations")
             wandb.run.log_artifact(initialisation_artifact, aliases=str(0))
         else:
-            supervised_images = torch.load('images.pth')
-            return supervised_images
+            supervised_z = torch.load('pretrained_models/supervision_images_pool/z_generated.pth')
+            supervised_idx = [1369, 4016, 1897, 3659, 4614, 4570, 2384, 3535, 829, 2019, 1352, 3041, 4406, 1959]
+            image_array = torch.stack([torch.clamp(F.avg_pool2d(generator.generator(
+                    generator.generator.gen.style(supervised_z[idx].view(-1, self.config.latent_dim)).cuda()).detach(), 4, 4),
+                                                       min=-1, max=1) for idx in supervised_idx])
+            image_array = image_array.view(-1, 3, 256, 256)
+            grid = torchvision.utils.make_grid(image_array, nrow=2, scale_each=True, normalize=True)
+            images = wandb.Image(grid, caption="Supervision images")
+            wandb.log({"supervision_images": images})
 
-    def make_shifts(self, latent_dim, epsilon):
-        target_indices = torch.randint(0, len(self.all_attr_list), self.config.batch_size)
-        type_idx = torch.randint(0, 2, self.config.batch_size)
+            supervised_images = torch.stack([generator.generator(
+                    generator.generator.gen.style(supervised_z[idx].view(-1, self.config.latent_dim)).cuda()).detach() for idx in supervised_idx])
+            return supervised_images.detach().squeeze(1)
+
+    def make_shifts(self, latent_dim):
+        target_indices = torch.randint(0, len(self.all_attr_list), (self.config.batch_size,))
+        type_idx = torch.randint(0, 2, (self.config.batch_size,))
 
         if self.config.shift_distribution == 'normal':
             shifts = torch.randn(target_indices.shape).to(self.config.device)
         elif self.config.shift_distribution == 'uniform':
             shifts = 2.0 * torch.rand(target_indices.shape).to(self.config.device) - 1.0
 
-        shifts = epsilon * shifts
+        shifts = self.config.epsilon * shifts
         shifts[(shifts < self.config.min_shift) & (shifts > 0)] = self.config.min_shift
         shifts[(shifts > -self.config.min_shift) & (shifts < 0)] = -self.config.min_shift
 
