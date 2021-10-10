@@ -36,8 +36,7 @@ def run_training_wrapper(config, seed, logger, perf_logger):
     # saver.load_model((deformator,deformator_opt))
     for iteration in range(config.num_iterations):
         deformator, deformator_opt, classifier, classifier_opt, deformator_loss, classifier_loss = \
-            model_trainer.train_ours(generator, supervision_images, deformator, deformator_opt, classifier,
-                                     classifier_opt, seed)
+            model_trainer.train_ours(generator, supervision_images, deformator, deformator_opt, classifier, classifier_opt, seed)
         classifier_loss_list.append(classifier_loss.item())
         deformator_loss_list.append(deformator_loss.item())
 
@@ -48,6 +47,8 @@ def run_training_wrapper(config, seed, logger, perf_logger):
                 iteration, config.num_iterations, classifier_loss_avg, deformator_loss_avg))
             wandb.log({'iteration': iteration + 1, 'deformator_loss': deformator_loss_avg,
                        'classifier_loss': classifier_loss_avg})
+            classifier_loss_list = []
+            deformator_loss_list = []
 
         if iteration % config.saving_freq == 0 and iteration != 0:
             params = (deformator, deformator_opt, classifier, classifier_opt)
