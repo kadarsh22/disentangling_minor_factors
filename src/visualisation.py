@@ -53,7 +53,7 @@ class Visualiser(object):
             with torch.no_grad():
                 cf_images = torch.stack([F.avg_pool2d(generator.generator(shifted_w[idx].view(-1, 512)), 16, 16) for idx in
                                          range(shifted_w.shape[0])]).view(-1, 3, 64, 64)
-            grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow=3, scale_each=True, normalize=True)
+            grid = torchvision.utils.make_grid(cf_images.clamp(min=-1, max=1), nrow= self.config.shifts_count, scale_each=True, normalize=True)
             lt_table.add_data(wandb.Image(grid), str(dir_idx))
             plt.imsave(os.path.join(temp_path, str(min_index) + '.png'), grid.permute(1, 2, 0).cpu().numpy())
             min_index = min_index + 1
