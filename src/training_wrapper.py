@@ -59,6 +59,8 @@ def run_training_wrapper(config, seed, logger, perf_logger):
             visualiser.generate_latent_traversal(generator, deformator, iteration, seed)
 
     visualiser.visualise_directions(generator, deformator, iteration, seed)
+
+
     ## need  to be changed
     # if iteration % config.evaluation_freq == 0 and iteration != 0:
     #     perf_logger.start_monitoring("Evaluating model for iteration :" + str(iteration))

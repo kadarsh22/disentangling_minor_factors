@@ -16,14 +16,14 @@ def get_config(args):
     # stylegan_car512,stylegan_cat256]
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
-    config.num_iterations = 1  # todo
-    config.batch_size = 2
+    config.num_iterations = 50000  # todo
+    config.batch_size = 8
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
     config.deformator_lr = 0.0001
     config.eps_predictor_lr = 0.0001
     config.num_directions = 7
     config.latent_dim = 512
-    config.epsilon = 6
+    config.epsilon = 8
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
     config.load_pretrained_z = True
@@ -31,9 +31,9 @@ def get_config(args):
     config.min_shift = 0.5
     config.supervision_pool_size = 5000
 
-    config.shifts_r = 5
-    config.shifts_count = 2
-    config.num_samples_lt = 2
+    config.shifts_r = 10
+    config.shifts_count = 5
+    config.num_samples_lt = 3
 
     config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
     config.eval_eps = 10  # Magnitude of perturbation for re-scoring analysis
@@ -41,15 +41,10 @@ def get_config(args):
     config.eval_batchsize = 2
     config.resume_direction = None
 
-    # Parameters related to training of gan inversion network
-    config.encoder_batch_size = 2
-    config.encoder_num_samples = 10000  # number of training points for gan inversion network
-    config.num_epochs_encoder = 20  # number of epochs gan inversion network should be trained
-
-    config.saving_freq = 20
-    config.logging_freq = 20
+    config.saving_freq = 1000
+    config.logging_freq = 500
     config.evaluation_freq = 20
-    config.visualisation_freq = 20
+    config.visualisation_freq = 1000
 
     config.classifier_path = 'pretrained_models'
     config.simple_cls_path = 'pretrained_models/classifiers/'

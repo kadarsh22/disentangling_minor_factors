@@ -35,7 +35,7 @@ class Visualiser(object):
 
     def generate_latent_traversal(self, generator, deformator, iteration ,seed):
         min_index = 0
-        directions = deformator.ortho_mat
+        directions = deformator.ortho_mat.T
         temp_path = os.path.join(self.config.result_path, 'temp')
         os.makedirs(temp_path, exist_ok=True)
         z = generator.sample_zs(self.config.batch_size, seed)
@@ -47,7 +47,7 @@ class Visualiser(object):
             for idx, z_ in enumerate(z):
                 for i, shift in enumerate(
                         np.linspace(-self.config.shifts_r, self.config.shifts_r, self.config.shifts_count)):
-                    w = generator.generator.gen.style(z_)
+                    w = generator.generator.gen.style(z_.view(-1,self.config.latent_dim))
                     shifted_w.append(w + directions[dir_idx: dir_idx + 1] * shift)
             shifted_w = torch.stack(shifted_w).squeeze(dim=1)
             with torch.no_grad():

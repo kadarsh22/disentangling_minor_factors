@@ -5,7 +5,6 @@ import torch
 import numpy as np
 import torch.nn as nn
 from models.attribute_predictors import attribute_utils, attribute_predictor
-from torchvision import transforms
 import torchvision
 import torch.nn.functional as F
 import wandb
@@ -44,14 +43,14 @@ class Trainer(object):
         classifier_loss.backward()
         classifier_opt.step()
 
-        generator.zero_grad()
+        generator.generator.zero_grad()
         deformator_opt.zero_grad()
         z = generator.sample_zs(self.config.batch_size, seed)
         target_indices, type_idx, w_shift = self.make_shifts(deformator.input_dim)
         w = generator.generator.gen.style(z)
         images = generator.generator(w + w_shift)
         pred = classifier(images)
-        pred_logits = torch.gather(pred, dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1).to(self.config.device))
+        pred_logits = torch.gather(pred.view(-1,self.config.num_directions), dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1).to(self.config.device))
         deformator_loss = self.classifier_loss(pred_logits.view(-1), type_idx.float().to(self.config.device))
         deformator_loss.backward()
         deformator_opt.step()
