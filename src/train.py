@@ -51,7 +51,7 @@ class Trainer(object):
         w = generator.generator.gen.style(z)
         images = generator.generator(w + deformator(w_shift))
         pred = classifier(images)
-        pred_logits = torch.gather(pred.view(-1, self.config.num_directions), dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1).to(self.config.device))
+        pred_logits = torch.gather(pred.view(-1, self.config.num_directions), dim=1, index=torch.LongTensor(target_indices).view(-1, 1).to(self.config.device))
         deformator_loss = self.classifier_loss(pred_logits.view(-1), type_idx.float().to(self.config.device))
         deformator_loss.backward()
         deformator_opt.step()
