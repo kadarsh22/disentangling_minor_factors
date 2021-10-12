@@ -23,7 +23,7 @@ def get_config(args):
     config.eps_predictor_lr = 0.0001
     config.num_directions = 7
     config.latent_dim = 512
-    config.epsilon = 8
+    config.epsilon = 5
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     config.train = True
     config.load_pretrained_z = True
@@ -31,7 +31,7 @@ def get_config(args):
     config.min_shift = 0.5
     config.supervision_pool_size = 5000
 
-    config.shifts_r = 10
+    config.shifts_r = 5
     config.shifts_count = 5
     config.num_samples_lt = 3
 

@@ -19,6 +19,7 @@ class Classifier(nn.Module):
         self.features.register_forward_hook(save_hook)
         self.downsample = downsample
 
+        self.fine_tuning_network = nn.Linear(512,512)
         self.shift_estimator = nn.Linear(512, num_dirs)
 
     def forward(self, x):
@@ -26,6 +27,7 @@ class Classifier(nn.Module):
         self.features_extractor(x)
         features = self.features.output.view([batch_size, -1])
 
+        features = self.fine_tuning_network(features)
         shift = self.shift_estimator(features)
 
         return shift.squeeze()
