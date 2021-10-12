@@ -16,8 +16,8 @@ class Trainer(object):
     def __init__(self, config):
         super(Trainer, self).__init__()
         self.config = config
-        self.all_attr_list = ['Bald', 'Bangs', 'Goatee', 'Mustache', 'Pale_Skin',
-                              'Wearing_Lipstick','Pose']
+        self.all_attr_list = ['Bald', 'Bangs', 'Goatee', 'Mustache',
+                              'Wearing_Lipstick', 'Pose']
         self.classifier_loss = nn.BCEWithLogitsLoss()
 
     @staticmethod
@@ -106,6 +106,7 @@ class Trainer(object):
         else:
             supervised_z = torch.load('pretrained_models/supervision_images_pool/z_generated.pth')
             supervised_idx = [1369, 4016, 1897, 3659, 4614, 4570, 2384, 3535, 829, 2019, 1352, 3041, 4406, 1959]
+            supervised_idx = [1369, 4016, 1897, 3659, 4614, 4570, 2384, 3535, 1352, 3041, 4406, 1959]
             image_array = torch.stack([torch.clamp(F.avg_pool2d(generator.generator(
                     generator.generator.gen.style(supervised_z[idx].view(-1, self.config.latent_dim)).cuda()).detach(), 4, 4),
                                                        min=-1, max=1) for idx in supervised_idx])

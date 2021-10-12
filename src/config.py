@@ -17,11 +17,11 @@ def get_config(args):
     config.initialisation = 'closed_form'
     config.random_seeds = [123]
     config.num_iterations = 50000  # todo
-    config.batch_size = 7
+    config.batch_size = 6
     config.deformator_type = 'ortho'  # choices = ['linear','ortho']
     config.deformator_lr = 0.0001
     config.eps_predictor_lr = 0.0001
-    config.num_directions = 7
+    config.num_directions = 6
     config.latent_dim = 512
     config.epsilon = 5
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -37,7 +37,7 @@ def get_config(args):
 
     config.eval_samples = 8  # Number of samples used for computing re-scoring matrix
     config.eval_eps = 10  # Magnitude of perturbation for re-scoring analysis
-    config.eval_directions = 7
+    config.eval_directions = 6
     config.eval_batchsize = 2
     config.resume_direction = None
 
