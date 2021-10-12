@@ -32,6 +32,7 @@ class Trainer(object):
 
     def train_ours(self, generator, supervision_images, deformator, deformator_opt, classifier, classifier_opt, seed):
 
+        classifier.train()
         classifier_opt.zero_grad()
         attribute_idx = torch.randint(0, len(self.all_attr_list), (self.config.batch_size, 1)).view(-1)
         type_idx = torch.randint(0, 2, (self.config.batch_size, 1)).view(-1)
@@ -43,6 +44,7 @@ class Trainer(object):
         classifier_loss.backward()
         classifier_opt.step()
 
+        classifier.eval()
         generator.generator.zero_grad()
         classifier.zero_grad()
         deformator_opt.zero_grad()
@@ -51,7 +53,7 @@ class Trainer(object):
         w = generator.generator.gen.style(z)
         images = generator.generator(w + deformator(w_shift))
         pred = classifier(images)
-        pred_logits = torch.gather(pred.view(-1, self.config.num_directions), dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1).to(self.config.device))
+        pred_logits = torch.gather(pred.view(-1, self.config.num_directions), dim=1, index=torch.LongTensor(target_indices).view(-1, 1).to(self.config.device))
         deformator_loss = self.classifier_loss(pred_logits.view(-1), type_idx.float().to(self.config.device))
         deformator_loss.backward()
         deformator_opt.step()
