@@ -47,7 +47,7 @@ class Visualiser(object):
             for idx, z_ in enumerate(z):
                 for i, shift in enumerate(
                         np.linspace(-self.config.shifts_r, self.config.shifts_r, self.config.shifts_count)):
-                    w = generator.generator.gen.style(z_.view(-1,  self.config.latent_dim))
+                    w = generator.generator.gen.style(z_.view(self.config.batch_size,  self.config.latent_dim))
                     shifted_w.append(w + directions[dir_idx: dir_idx + 1] * shift)
             shifted_w = torch.stack(shifted_w).squeeze(dim=1)
             with torch.no_grad():

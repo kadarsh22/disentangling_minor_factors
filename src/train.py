@@ -33,7 +33,7 @@ class Trainer(object):
     def train_ours(self, generator, supervision_images, deformator, deformator_opt, classifier, classifier_opt, seed):
 
         classifier_opt.zero_grad()
-        attribute_idx = torch.randint(0, len(self.all_attr_list), (self.config.batch_size, 1)).view(-1)
+        attribute_idx = torch.LongTensor(range(len(self.all_attr_list)))
         type_idx = torch.randint(0, 2, (self.config.batch_size, 1)).view(-1)
         image_idx = attribute_idx*2 + type_idx
         one_shot_images = supervision_images[image_idx.view(-1)]
@@ -43,7 +43,7 @@ class Trainer(object):
         classifier_loss.backward()
         classifier_opt.step()
 
-        generator.generator.zero_grad()
+        generator.generator.gen.style.zero_grad()
         classifier.zero_grad()
         deformator_opt.zero_grad()
         z = torch.randn(self.config.batch_size, self.config.latent_dim).cuda()
@@ -51,7 +51,7 @@ class Trainer(object):
         w = generator.generator.gen.style(z)
         images = generator.generator(w + deformator(w_shift))
         pred = classifier(images)
-        pred_logits = torch.gather(pred.view(-1, self.config.num_directions), dim=1, index=torch.LongTensor(target_indices).view(-1, 1).to(self.config.device))
+        pred_logits = torch.gather(pred.view(self.config.batch_size, self.config.num_directions), dim=1, index=torch.LongTensor(target_indices).view(-1, 1).to(self.config.device))
         deformator_loss = self.classifier_loss(pred_logits.view(-1), type_idx.float().to(self.config.device))
         deformator_loss.backward()
         deformator_opt.step()
