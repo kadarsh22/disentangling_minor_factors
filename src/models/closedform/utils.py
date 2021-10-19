@@ -6,9 +6,29 @@ from models.closedform.closedform_directions import CfLinear, CfOrtho
 from models.closedform.pggan_generator import PGGANGenerator
 from models.closedform.stylegan_generator import StyleGANGenerator
 from models.closedform.stylegan2_generator import StyleGAN2Generator
+from models.closedform.pggan_discriminator import PGGANDiscriminator
 
 GEN_CHECKPOINT_DIR = 'pretrained_models/generators/ClosedForm'
 DEFORMATOR_CHECKPOINT_DIR = 'pretrained_models/deformators/ClosedForm'
+
+
+def build_discriminator(gan_type, resolution, **kwargs):
+    """Builds generator by GAN type.
+
+    Args:
+        gan_type: GAN type to which the generator belong.
+        resolution: Synthesis resolution.
+        **kwargs: Additional arguments to build the generator.
+
+    Raises:
+        ValueError: If the `gan_type` is not supported.
+        NotImplementedError: If the `gan_type` is not implemented.
+    """
+
+    if gan_type == 'pggan':
+        return PGGANDiscriminator(resolution, **kwargs)
+    else:
+        raise NotImplementedError
 
 
 def build_generator(gan_type, resolution, **kwargs):
@@ -57,6 +77,7 @@ def load_generator(config, model_name=''):
     # Build generator.
     print(f'Building generator for model `{model_name}` ...')
     generator = build_generator(**model_config)
+    discriminator = build_discriminator(**model_config)
     print(f'Finish building generator.')
 
     # Load pre-trained weights.
@@ -72,10 +93,13 @@ def load_generator(config, model_name=''):
         generator.load_state_dict(checkpoint['generator_smooth'])
     else:
         generator.load_state_dict(checkpoint['generator'])
+    discriminator.load_state_dict(checkpoint['discriminator'])
+    discriminator = discriminator.to(config.device)
+    discriminator.eval()
     generator = generator.to(config.device)
     generator.eval()
     print(f'Finish loading checkpoint.')
-    return generator
+    return generator, discriminator
 
 
 def load_deformator(config):

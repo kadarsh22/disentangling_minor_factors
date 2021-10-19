@@ -27,40 +27,37 @@ def run_training_wrapper(config, seed, logger, perf_logger):
     evaluator = Evaluator(config)
     visualiser = Visualiser(config)
 
-    generator, deformator, deformator_opt, classifier, classifier_opt = models
+    generator, deformator, deformator_opt, discriminator, classifier, classifier_opt = models
     deformator.train()
-    generator.generator.eval()
+    generator.eval()
+    discriminator.eval()
     classifier_loss_list = []
     deformator_loss_list = []
     supervision_images = model_trainer.get_initialisations(generator, seed)
+    exit()
     # saver.load_model((deformator,deformator_opt))
     for iteration in range(config.num_iterations):
-        deformator, deformator_opt, classifier, classifier_opt, deformator_loss, classifier_loss = \
-            model_trainer.train_ours(generator, supervision_images, deformator, deformator_opt, classifier, classifier_opt, seed)
+        generator, discriminator, classifier, classifier_opt, classifier_loss = model_trainer.train_classifier(
+            generator, discriminator, classifier, classifier_opt)
         classifier_loss_list.append(classifier_loss.item())
-        deformator_loss_list.append(deformator_loss.item())
 
         if iteration % config.logging_freq == 0 and iteration != 0:
             classifier_loss_avg = sum(classifier_loss_list) / len(classifier_loss_list)
-            deformator_loss_avg = sum(deformator_loss_list) / len(deformator_loss_list)
-            logger.info("step : %d / %d eps predictor loss : %.4f Deformator_loss  %.4f " % (
-                iteration, config.num_iterations, classifier_loss_avg, deformator_loss_avg))
-            wandb.log({'iteration': iteration + 1, 'deformator_loss': deformator_loss_avg,
-                       'classifier_loss': classifier_loss_avg})
+            logger.info("step : %d / %d eps predictor loss : %.4f" % (
+                iteration, config.num_iterations, classifier_loss_avg))
+            wandb.log({'iteration': iteration + 1, 'classifier_loss': classifier_loss_avg})
             classifier_loss_list = []
-            deformator_loss_list = []
 
-        if iteration % config.saving_freq == 0 and iteration != 0:
-            params = (deformator, deformator_opt, classifier, classifier_opt)
-            perf_logger.start_monitoring("Saving Model for iteration :" + str(iteration))
-            saver.save_model(params, iteration)
-            perf_logger.stop_monitoring("Saving Model for iteration :" + str(iteration))
+        # if iteration % config.saving_freq == 0 and iteration != 0:
+        #     params = (deformator, deformator_opt, classifier, classifier_opt)
+        #     perf_logger.start_monitoring("Saving Model for iteration :" + str(iteration))
+        #     saver.save_model(params, iteration)
+        #     perf_logger.stop_monitoring("Saving Model for iteration :" + str(iteration))
 
-        if iteration % config.visualisation_freq == 0:
-            visualiser.generate_latent_traversal(generator, deformator, iteration, seed)
-
-    visualiser.visualise_directions(generator, deformator, iteration, seed)
-
+    #     if iteration % config.visualisation_freq == 0:
+    #         visualiser.generate_latent_traversal(generator, deformator, iteration, seed)
+    #
+    # visualiser.visualise_directions(generator, deformator, iteration, seed)
 
     ## need  to be changed
     # if iteration % config.evaluation_freq == 0 and iteration != 0:

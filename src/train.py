@@ -17,7 +17,7 @@ class Trainer(object):
         super(Trainer, self).__init__()
         self.config = config
         self.all_attr_list = ['Bald', 'Bangs', 'Goatee', 'Mustache', 'Pale_Skin',
-                              'Wearing_Lipstick','Pose']
+                              'Wearing_Lipstick', 'Pose']
         self.classifier_loss = nn.BCEWithLogitsLoss()
 
     @staticmethod
@@ -36,10 +36,11 @@ class Trainer(object):
         classifier_opt.zero_grad()
         attribute_idx = torch.randint(0, len(self.all_attr_list), (self.config.batch_size, 1)).view(-1)
         type_idx = torch.randint(0, 2, (self.config.batch_size, 1)).view(-1)
-        image_idx = attribute_idx*2 + type_idx
+        image_idx = attribute_idx * 2 + type_idx
         one_shot_images = supervision_images[image_idx.view(-1)]
         pred = classifier(one_shot_images)
-        pred_logits = torch.gather(pred.view(self.config.batch_size,-1), dim=1, index=torch.LongTensor(attribute_idx).view(-1, 1).to(self.config.device)).view(-1)
+        pred_logits = torch.gather(pred.view(self.config.batch_size, -1), dim=1,
+                                   index=torch.LongTensor(attribute_idx).view(-1, 1).to(self.config.device)).view(-1)
         classifier_loss = self.classifier_loss(pred_logits, type_idx.float().to(self.config.device))
         classifier_loss.backward()
         classifier_opt.step()
@@ -53,16 +54,23 @@ class Trainer(object):
         w = generator.generator.gen.style(z)
         images = generator.generator(w + deformator(w_shift))
         pred = classifier(images)
-        pred_logits = torch.gather(pred.view(-1, self.config.num_directions), dim=1, index=torch.LongTensor(target_indices).view(-1, 1).to(self.config.device))
+        pred_logits = torch.gather(pred.view(-1, self.config.num_directions), dim=1,
+                                   index=torch.LongTensor(target_indices).view(-1, 1).to(self.config.device))
         deformator_loss = self.classifier_loss(pred_logits.view(-1), type_idx.float().to(self.config.device))
         deformator_loss.backward()
         deformator_opt.step()
 
         return deformator, deformator_opt, classifier, classifier_opt, deformator_loss, classifier_loss
 
+    def train_classifier(self, generator, discriminator, classifier, classifier_opt):
+
+        classifier.zero_grad()
+
+        return generator, discriminator, classifier, classifier_opt
+
     def get_initialisations(self, generator, seed):
 
-        z_full = generator.sample_zs(self.config.supervision_pool_size, seed)
+        z_full = torch.randn(self.config.supervision_pool_size, self.config.latent_dim).to(self.config.device)
         os.makedirs(os.path.join(self.config.result_path, "generated_images"), exist_ok=True)
         torch.save(z_full, os.path.join(self.config.result_path, "generated_images", "z_generated.pth"))
         new_dataset = NoiseDataset(z_full)
@@ -80,15 +88,14 @@ class Trainer(object):
                 predictor.to(self.config.device).eval()
                 classifier_scores = []
                 for batch_idx, z in enumerate(z_loader):
-                    w = generator.generator.gen.style(z)
-                    images = torch.clamp(F.avg_pool2d(generator.generator(w), 4, 4), min=-1, max=1)
+                    images = torch.clamp(F.avg_pool2d(generator(z), 4, 4), min=-1, max=1)
                     scores = torch.softmax(predictor(images.to(self.config.device)), dim=1)[:, 1]
                     classifier_scores = classifier_scores + scores.detach().tolist()
                 print(len(classifier_scores))
                 classifier_scores_array = np.array(classifier_scores)
                 ordered_idx[str(classifier_name)] = classifier_scores_array
-                smallest_idx = classifier_scores_array.argsort()[:10]
-                largest_idx = classifier_scores_array.argsort()[-10:][::-1]
+                smallest_idx = classifier_scores_array.argsort()[:20]
+                largest_idx = classifier_scores_array.argsort()[-20:][::-1]
                 print(classifier_name)
                 print("-------smallest_idx-------")
                 print(smallest_idx)
@@ -96,7 +103,7 @@ class Trainer(object):
                 print(largest_idx)
                 indx = smallest_idx.tolist() + largest_idx.tolist()
                 image_array = torch.stack([torch.clamp(F.avg_pool2d(generator.generator(
-                    generator.generator.gen.style(z_full[idx].view(-1, self.config.latent_dim)).cuda()).detach(), 4, 4),
+                    generator(z_full[idx].view(-1, self.config.latent_dim)).cuda()).detach(), 4, 4),
                                                        min=-1, max=1) for idx in indx])
                 image_array = image_array.view(-1, 3, 256, 256)
                 grid = torchvision.utils.make_grid(image_array, nrow=10, scale_each=True, normalize=True)
@@ -109,15 +116,16 @@ class Trainer(object):
             supervised_z = torch.load('pretrained_models/supervision_images_pool/z_generated.pth')
             supervised_idx = [1369, 4016, 1897, 3659, 4614, 4570, 2384, 3535, 829, 2019, 1352, 3041, 4406, 1959]
             image_array = torch.stack([torch.clamp(F.avg_pool2d(generator.generator(
-                    generator.generator.gen.style(supervised_z[idx].view(-1, self.config.latent_dim)).cuda()).detach(), 4, 4),
-                                                       min=-1, max=1) for idx in supervised_idx])
+                generator.generator.gen.style(supervised_z[idx].view(-1, self.config.latent_dim)).cuda()).detach(), 4,
+                                                                4),
+                                                   min=-1, max=1) for idx in supervised_idx])
             image_array = image_array.view(-1, 3, 256, 256)
             grid = torchvision.utils.make_grid(image_array, nrow=2, scale_each=True, normalize=True)
             images = wandb.Image(grid, caption="Supervision images")
             wandb.log({"supervision_images": images})
 
-            supervised_images = torch.stack([generator.generator(
-                    generator.generator.gen.style(supervised_z[idx].view(-1, self.config.latent_dim)).cuda()).detach() for idx in supervised_idx])
+            supervised_images = torch.stack([generator(supervised_z[idx].view(-1, self.config.latent_dim)).cuda().detach() for
+                                             idx in supervised_idx])
             return supervised_images.detach().squeeze(1)
 
     def make_shifts(self, latent_dim):

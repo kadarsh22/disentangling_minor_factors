@@ -7,25 +7,13 @@ def save_hook(module, input, output):
 
 
 class Classifier(nn.Module):
-    def __init__(self, downsample=None, channels=3, num_dirs=10):
+    def __init__(self, num_dirs=10):
         super(Classifier, self).__init__()
-        self.features_extractor = resnet18(pretrained=False)
-        self.features_extractor.conv1 = nn.Conv2d(
-            channels, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-        nn.init.kaiming_normal_(self.features_extractor.conv1.weight,
-                                mode='fan_out', nonlinearity='relu')
 
-        self.features = self.features_extractor.avgpool
-        self.features.register_forward_hook(save_hook)
-        self.downsample = downsample
-
-        self.shift_estimator = nn.Linear(512, num_dirs)
+        self.classifier_layer_1 = nn.Linear(512, 512)
+        self.classifier_layer_2 = nn.Linear(512, 10)
 
     def forward(self, x):
-        batch_size = x.shape[0]
-        self.features_extractor(x)
-        features = self.features.output.view([batch_size, -1])
-
-        shift = self.shift_estimator(features)
-
-        return shift.squeeze()
+        out = self.classifier_layer_1(x)
+        out = self.classifier_layer_2(out)
+        return out
